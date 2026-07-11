@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport"
+    content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="mobile-web-app-capable" content="yes">
+  <title>Metro Launcher</title>
+  <link rel="apple-touch-icon" href="appico.png">
+  <link rel="icon" type="image/png" href="appico.png">
+  <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+  <!-- Desktop -->
+  <div id="desktop-frame">
+    <span class="frame-label">Metro Launcher</span>
+    <div class="phone-bezel">
+      <div id="launcher">
+        <div class="bg-layer" id="bg-layer-desktop"></div>
+        <div class="bg-darken" id="bg-darken-desktop"></div>
+        <div class="header">
+          <div class="header-row">
+            <div>
+              <h1>Hello</h1>
+              <div class="header-date" id="header-date"></div>
+            </div>
+            <div class="header-actions">
+              <button type="button" class="header-btn" id="btn-menu" title="Menu">
+                <svg viewBox="0 0 24 24">
+                  <title>Menu</title>
+                  <circle cx="12" cy="5" r="2"></circle>
+                  <circle cx="12" cy="12" r="2"></circle>
+                  <circle cx="12" cy="19" r="2"></circle>
+                </svg>
+              </button>
+              <button type="button" class="header-btn" id="btn-info" title="Info">
+                <span style="font-size: 24px; font-weight: bold; font-family: Arial; margin-top: 1px;">?</span>
+              </button>
+              <div class="header-menu" id="header-menu">
+                <button type="button" class="header-btn" id="btn-bg" title="Settings">
+                  <svg viewBox="0 0 24 24">
+                    <title>Settings</title>
+                    <circle cx="12" cy="12" r="3" />
+                    <path
+                      d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.9 2.9l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 0 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.9-2.9l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 0 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.9-2.9l.1.1a1.7 1.7 0 0 0 1.9.3h.1a1.7 1.7 0 0 0 1-1.5V3a2 2 0 0 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.9 2.9l-.1.1a1.7 1.7 0 0 0-.3 1.9v.1a1.7 1.7 0 0 0 1.5 1H21a2 2 0 0 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z" />
+                  </svg>
+                </button>
+                <button type="button" class="header-btn" id="btn-reload" title="Refresh data">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                    stroke-linejoin="round">
+                    <title>Refresh data</title>
+                    <polyline points="23 4 23 10 17 10"></polyline>
+                    <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
+                  </svg>
+                </button>
+                <button type="button" class="header-btn" id="btn-add" title="Add tile">
+                  <svg viewBox="0 0 24 24">
+                    <title>Add tile</title>
+                    <line x1="12" y1="5" x2="12" y2="19" />
+                    <line x1="5" y1="12" x2="19" y2="12" />
+                  </svg>
+                </button>
+                <button type="button" class="header-btn edit-btn" id="btn-edit" title="Edit mode">
+                  <svg viewBox="0 0 24 24">
+                    <title>Edit mode</title>
+                    <path d="M17 3a2.8 2.8 0 0 1 4 4L7.5 20.5 2 22l1.5-5.5z" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="grid-scroll" id="grid-scroll-inner">
+          <div class="tile-grid" id="tile-grid-inner"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Mobile -->
+  <div id="launcher-mobile">
+    <div class="bg-layer" id="bg-layer-mobile"></div>
+    <div class="bg-darken" id="bg-darken-mobile"></div>
+    <div class="header">
+      <div class="header-row">
+        <div>
+          <h1>Start</h1>
+          <div class="header-date" id="header-date-m"></div>
+        </div>
+        <div class="header-actions">
+          <button type="button" class="header-btn" id="btn-menu-m" title="Menu">
+            <svg viewBox="0 0 24 24">
+              <title>Menu</title>
+              <circle cx="12" cy="5" r="2"></circle>
+              <circle cx="12" cy="12" r="2"></circle>
+              <circle cx="12" cy="19" r="2"></circle>
+            </svg>
+          </button>
+          <button type="button" class="header-btn" id="btn-info-m" title="Info">
+            <span style="font-size: 24px; font-weight: bold; font-family: Arial, sans-serif;">?</span>
+          </button>
+          <div class="header-menu" id="header-menu-m">
+            <button type="button" class="header-btn" id="btn-bg-m" title="Settings">
+              <svg viewBox="0 0 24 24">
+                <title>Settings</title>
+                <circle cx="12" cy="12" r="3" />
+                <path
+                  d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.9 2.9l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 0 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.9-2.9l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 0 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.9-2.9l.1.1a1.7 1.7 0 0 0 1.9.3h.1a1.7 1.7 0 0 0 1-1.5V3a2 2 0 0 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.9 2.9l-.1.1a1.7 1.7 0 0 0-.3 1.9v.1a1.7 1.7 0 0 0 1.5 1H21a2 2 0 0 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z" />
+              </svg>
+            </button>
+            <button type="button" class="header-btn" id="btn-reload-m" title="Refresh data">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                stroke-linejoin="round">
+                <title>Refresh data</title>
+                <polyline points="23 4 23 10 17 10"></polyline>
+                <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
+              </svg>
+            </button>
+            <button type="button" class="header-btn" id="btn-add-m" title="Add tile">
+              <svg viewBox="0 0 24 24">
+                <title>Add tile</title>
+                <line x1="12" y1="5" x2="12" y2="19" />
+                <line x1="5" y1="12" x2="19" y2="12" />
+              </svg>
+            </button>
+            <button type="button" class="header-btn edit-btn" id="btn-edit-m" title="Edit mode">
+              <svg viewBox="0 0 24 24">
+                <title>Edit mode</title>
+                <path d="M17 3a2.8 2.8 0 0 1 4 4L7.5 20.5 2 22l1.5-5.5z" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="grid-scroll" id="grid-scroll-mobile">
+      <div class="tile-grid" id="tile-grid-mobile"></div>
+    </div>
+  </div>
+
+  <!-- Gate screen -->
+  <div id="gate-screen" style="display:none;"></div>
+
+  <!-- Orientation Lock Screen -->
+  <div id="orientation-lock-screen">
+    <div class="orientation-icon" style="transform: scale(0.5);">
+      <img src="https://img.icons8.com/?size=100&id=Bw1qS7FPUzIJ&format=png&color=FFFFFF" alt="">
+    </div>
+    <p>Please rotate device back to portrait to continue using the launcher.</p>
+  </div>
+
+  <!-- Modal -->
+  <div class="modal-overlay" id="modal-overlay">
+    <div class="modal-sheet" id="modal-sheet"></div>
+  </div>
+
+  <!-- Context Menu -->
+  <div class="context-menu" id="context-menu"></div>
+
+  <!-- Toast -->
+  <div class="toast" id="toast"></div>
+
+  <script src="app.js"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js')
+          .then(() => {
+            console.log('ServiceWorker registration successful');
+          })
+          .catch(err => {
+            console.log('ServiceWorker registration failed: ', err);
+          });
+      });
+    }
+  </script>
+</body>
+
+</html>
