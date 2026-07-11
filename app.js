@@ -2314,6 +2314,7 @@ const App = (() => {
 
       const REQUIRED_ASSETS = [
         './', './index.html', './style.css', './app.js', './manifest.json', './version.txt',
+        './segoe-ui-supro.otf',
         './weather_bg/01d.jpg', './weather_bg/01n.jpg',
         './weather_bg/02d.jpg', './weather_bg/02n.jpg',
         './weather_bg/03d.jpg', './weather_bg/03n.jpg',
