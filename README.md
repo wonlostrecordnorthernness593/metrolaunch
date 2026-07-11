@@ -43,10 +43,18 @@ Please fully read the readme before installing and using the launcher...
 
 ## Spotify tile integration
 
-- You need a Mac running python3 for this server part.
+- You need a Mac running Python 3 for this server part.
 - Spotify is currently being a douche after a certain shadow library dumped all of their content and has halted new app creation. I am looking for a better way around this but don't hold your breath.
-- Then in the Spotify live tile settings, configure the server IP and port.
-- You may want to use something like [Tailscale](https://tailscale.com/) so you'll always be able to access it.
+- Then in the Spotify live tile settings, configure the server IP and port. You will need to port-foward this or use a Cloudflare tunnel...
+
+**About port-forwarding, CORS, and the proxy**
+
+- So, in total stupidity, I assumed something I put out to GitHub pages would work instantly as well as it did on my local machine. But it did not. Turns out CORS prevents using just the LAN or WAN IP of an unsecure (HTTP) resource...
+
+Your solutions are as follows until I find a better way for this. My apologies...
+- To port forward `8088` so as to allow the machine to be accessible from the outside internet, then use the in-built CORS proxy so GitHub Pages will not run into content security issues
+- Use something like a [Cloudflare tunnel](https://developers.cloudflare.com/cloudflare-one/networks/connectors/cloudflare-tunnel/do-more-with-tunnels/local-management/as-a-service/macos/) (recommended) or `ngrok` (not recommended due to strict usage limitations)
+- Clone the entire repo using `git clone` and run it off your local or forwarded network via HTTP to have no content security issues
 
 I am working on making a Windows and Linux server version...
 
