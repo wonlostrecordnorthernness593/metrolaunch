@@ -11,8 +11,7 @@ document.addEventListener('gesturestart', (e) => {
 document.addEventListener('touchmove', (e) => {
   // let range sliders work natively
   if (e.target.closest('input[type="range"]')) return;
-
-  const scrollEl = e.target.closest('.grid-scroll') || e.target.closest('.modal-sheet');
+  const scrollEl = e.target.closest('.grid-scroll, .modal-sheet, .scrollable-y');
 
   if (scrollEl) {
     if (scrollEl.classList.contains('dragging-active')) {
@@ -50,7 +49,7 @@ document.addEventListener('touchmove', (e) => {
 }, { passive: false });
 
 document.addEventListener('touchstart', (e) => {
-  const scrollEl = e.target.closest('.grid-scroll') || e.target.closest('.modal-sheet');
+  const scrollEl = e.target.closest('.grid-scroll, .modal-sheet, .scrollable-y');
   if (scrollEl && e.targetTouches && e.targetTouches[0]) {
     scrollEl._startY = e.targetTouches[0].clientY;
   }
@@ -2302,7 +2301,7 @@ const App = (() => {
           <div style="font-size:14px;margin-top:8px;color:${statusColor};">${allGood ? '\u2713 all assets cached - full offline support' : '\u26A0 some assets are missing from cache'}</div>
         </div>
         <div class="form-divider"></div>
-        <div style="max-height:240px;overflow-y:auto;padding:4px 0;">
+        <div class="scrollable-y" style="max-height:240px;overflow-y:auto;padding:4px 0; touch-action: pan-y;">
           ${rows}
         </div>
         <div class="modal-actions" style="margin-top:12px;">
