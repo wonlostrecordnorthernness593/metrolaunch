@@ -1869,7 +1869,7 @@ const App = (() => {
         </select>
       </div>
       <div class="form-group">
-        <label>Username</label>
+        <label>Username (On Leopard Server)</label>
         <input type="text" id="spotify-username" value="${escHtml(tile.spotifyUsername || settings.spotifyUsername || '')}" placeholder="Your registered username" autocomplete="off" autocapitalize="none">
       </div>
       <div class="form-group">

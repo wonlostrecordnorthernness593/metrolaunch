@@ -12,9 +12,12 @@ Usage:
 
 import json
 import os
+import select
 import subprocess
 import sys
+import termios
 import time
+import tty
 import urllib.request
 import urllib.parse
 import ssl
@@ -141,6 +144,7 @@ def main():
                 print(f'[FAIL] Registration failed - {error_msg}')
                 print('')
 
+    print('[NFO] Strike \'q\' key to quit the program')
     print('')
 
     # ── polling loop ──
@@ -148,75 +152,90 @@ def main():
     prev_artist = None
     prev_playing = None
 
-    while True:
-        try:
-            status = get_spotify_status()
+    # put terminal into raw mode for non-blocking key detection
+    old_settings = termios.tcgetattr(sys.stdin)
+    tty.setcbreak(sys.stdin.fileno())
 
-            if status == 'NOT_RUNNING':
-                # if it was playing before, send a pause
-                if prev_playing is True:
-                    make_request(f'{server_url}?action=update', {
-                        'username': username,
-                        'track': '',
-                        'artist': '',
-                        'isPlaying': False,
-                    }, 'POST')
-                    print('[Spotify] Detected Spotify closed')
-                    prev_playing = False
+    try:
+        while True:
+            # check for 'q' keypress (non-blocking)
+            if select.select([sys.stdin], [], [], 0)[0]:
+                ch = sys.stdin.read(1)
+                if ch.lower() == 'q':
+                    break
 
-            elif status == 'PAUSED':
-                if prev_playing is not False:
-                    make_request(f'{server_url}?action=update', {
-                        'username': username,
-                        'track': prev_track or '',
-                        'artist': prev_artist or '',
-                        'isPlaying': False,
-                    }, 'POST')
-                    print('[Spotify] Detected song paused')
-                    prev_playing = False
+            try:
+                status = get_spotify_status()
 
-            elif status.startswith('PLAYING|'):
-                parts = status.split('|')
-                track = parts[1] if len(parts) > 1 else ''
-                artist = parts[2] if len(parts) > 2 else ''
+                if status == 'NOT_RUNNING':
+                    # if it was playing before, send a pause
+                    if prev_playing is True:
+                        make_request(f'{server_url}?action=update', {
+                            'username': username,
+                            'track': '',
+                            'artist': '',
+                            'isPlaying': False,
+                        }, 'POST')
+                        print('[Spotify] Detected Spotify closed')
+                        prev_playing = False
 
-                song_changed = (track != prev_track or artist != prev_artist)
-                resumed = (prev_playing is False and not song_changed)
+                elif status == 'PAUSED':
+                    if prev_playing is not False:
+                        make_request(f'{server_url}?action=update', {
+                            'username': username,
+                            'track': prev_track or '',
+                            'artist': prev_artist or '',
+                            'isPlaying': False,
+                        }, 'POST')
+                        print('[Spotify] Detected song paused')
+                        prev_playing = False
 
-                if song_changed:
-                    print(f'[Spotify] Detected song changed')
-                    make_request(f'{server_url}?action=update', {
-                        'username': username,
-                        'track': track,
-                        'artist': artist,
-                        'isPlaying': True,
-                    }, 'POST')
-                elif resumed:
-                    print(f'[Spotify] Detected song resumed "{track}"')
-                    make_request(f'{server_url}?action=update', {
-                        'username': username,
-                        'track': track,
-                        'artist': artist,
-                        'isPlaying': True,
-                    }, 'POST')
+                elif status.startswith('PLAYING|'):
+                    parts = status.split('|')
+                    track = parts[1] if len(parts) > 1 else ''
+                    artist = parts[2] if len(parts) > 2 else ''
 
-                prev_track = track
-                prev_artist = artist
-                prev_playing = True
+                    song_changed = (track != prev_track or artist != prev_artist)
+                    resumed = (prev_playing is False and not song_changed)
 
-            time.sleep(poll_rate)
+                    if song_changed:
+                        print(f'[Spotify] Detected song changed')
+                        make_request(f'{server_url}?action=update', {
+                            'username': username,
+                            'track': track,
+                            'artist': artist,
+                            'isPlaying': True,
+                        }, 'POST')
+                    elif resumed:
+                        print(f'[Spotify] Detected song resumed "{track}"')
+                        make_request(f'{server_url}?action=update', {
+                            'username': username,
+                            'track': track,
+                            'artist': artist,
+                            'isPlaying': True,
+                        }, 'POST')
 
-        except KeyboardInterrupt:
-            print('')
-            print('[OK] Client stopped')
-            # send a final pause so the tile clears
-            make_request(f'{server_url}?action=update', {
-                'username': username,
-                'track': '',
-                'artist': '',
-                'isPlaying': False,
-            }, 'POST')
-            break
+                    prev_track = track
+                    prev_artist = artist
+                    prev_playing = True
+
+                time.sleep(poll_rate)
+
+            except KeyboardInterrupt:
+                break
+
+    finally:
+        # restore terminal settings
+        termios.tcsetattr(sys.stdin, termios.TCSADRAIN, old_settings)
+        print('')
+        print('[OK] Client stopped')
+        # send a final pause so the tile clears
+        make_request(f'{server_url}?action=update', {
+            'username': username,
+            'track': '',
+            'artist': '',
+            'isPlaying': False,
+        }, 'POST')
 
 
 if __name__ == '__main__':
