@@ -411,7 +411,7 @@ const App = (() => {
       const item = currentNewsItem();
       if (item) {
         el.innerHTML =
-          `<div class="news-headline"${lc}>${escHtml(item.title.replace(/[@:;"',±$?⍼→]/g, '').replace(/[–_]/g, '-'))}</div>` +
+          `<div class="news-headline"${lc}>${escHtml(item.title.replace(/[@:;"',±$?⍼→+]/g, '').replace(/[–_]/g, '-'))}</div>` +
           `<div class="news-source">Hacker News</div>`;
       } else {
         el.innerHTML = '<div class="weather-nodata">Loading headlines\u2026</div>';
