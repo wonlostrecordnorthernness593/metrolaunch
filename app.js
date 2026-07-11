@@ -382,6 +382,7 @@ const App = (() => {
 
         let parsedTrack = spotifyData.track.replace(/[',.;:+!?]/g, '');
         parsedTrack = parsedTrack.replace(/\bfeat\b/gi, 'Feat');
+        parsedTrack = parsedTrack.replace(/\bpt\b/gi, 'PT');
 
         el.innerHTML =
           `<div class="spotify-bg-blur"${bgStyle}></div>` +
