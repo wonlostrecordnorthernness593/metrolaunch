@@ -5,7 +5,7 @@ It even uses the original Windows 8 weather images :)
 
 ![screenshot-a](https://i.ibb.co/9HNxBPN0/IMG-3137.png)
 
-**Getting into the launcher FASTERe** - Opening the icon from the Apple Homescreen can get annoying quickly.
+**Getting into the launcher FASTER** - Opening the icon from the Apple Homescreen can get annoying quickly.
 - Make a shortcut to open the URL prefaced with `webapp://` which is listed in this repo
 - In order for this to work, you must have the app installed via the 'add to home screen option' already
 - Then set it as the double back tap option
