@@ -311,6 +311,7 @@ const App = (() => {
   }
 
   // SPOTIFY LOGIC
+  const CORS_PROXY_TOKEN = atob('Q3RsbjM4NGZHZFVYMzlMZA==');
   let spotifyPollingInterval = null;
 
   function fetchSpotifyStatus() {
@@ -331,14 +332,14 @@ const App = (() => {
     const useCors = spTile?.spotifyUseCors;
 
     let fetchUrl = `${baseUrl}/spotify?t=${Date.now()}`;
-    if (useCors) fetchUrl = `https://pro.cors.lol/?url=${encodeURIComponent(fetchUrl)}&token=Ctln384fGdUX39Ld`;
+    if (useCors) fetchUrl = `https://pro.cors.lol/?url=${encodeURIComponent(fetchUrl)}&token=${CORS_PROXY_TOKEN}`;
 
     fetch(fetchUrl, { cache: 'no-store' })
       .then(r => r.json())
       .then(d => {
         if (d.isPlaying) {
           let cUrl = d.coverUrl ? `${baseUrl}${d.coverUrl}` : null;
-          if (cUrl && useCors) cUrl = `https://pro.cors.lol/?url=${encodeURIComponent(cUrl)}&token=Ctln384fGdUX39Ld`;
+          if (cUrl && useCors) cUrl = `https://pro.cors.lol/?url=${encodeURIComponent(cUrl)}&token=${CORS_PROXY_TOKEN}`;
           spotifyData = { track: d.track, artist: d.artist, coverUrl: cUrl };
         } else {
           spotifyData = null;
