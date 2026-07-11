@@ -225,7 +225,7 @@ const App = (() => {
         weatherData = {
           _zip: zip,
           location: d.name || zip,
-          temp: `${Math.round(d.main.temp)}\u00B0${settings.weatherUseCelsius ? 'C' : 'F'}`,
+          temp: `${Math.round(d.main.temp)} \u00B0${settings.weatherUseCelsius ? 'C' : 'F'}`,
           condition: d.weather?.length ? d.weather[0].main : '',
           bgUrl: fullBgUrl
         };
@@ -1766,8 +1766,8 @@ const App = (() => {
     showModal(`
       <h2>Weather Tile</h2>
       <div class="form-group">
-        <label>Zip Code</label>
-        <input type="text" id="weather-zip" value="${escHtml(settings.weatherZip)}" placeholder="e.g. 90210" autocomplete="off" inputmode="numeric">
+        <label>Postal / Zip Code</label>
+        <input type="text" id="weather-zip" value="${escHtml(settings.weatherZip)}" placeholder="e.g. 90210 or SW1A 1AA" autocomplete="off" inputmode="text">
       </div>
       <div class="form-group">
         <label>API Key</label>
