@@ -380,9 +380,12 @@ const App = (() => {
         let parsedArtist = spotifyData.artist.replace(/P!NK/gi, 'PINK');
         parsedArtist = parsedArtist.replace(/[!.]+$/g, '').replace(/!/g, '');
 
+        let parsedTrack = spotifyData.track.replace(/[',.;:+?]/g, '');
+        parsedTrack = parsedTrack.replace(/\bfeat\b/gi, 'Feat');
+
         el.innerHTML =
           `<div class="spotify-bg-blur"${bgStyle}></div>` +
-          `<div class="spotify-track">${escHtml(spotifyData.track.replace(/[',.;:+?]/g, ''))}</div>` +
+          `<div class="spotify-track">${escHtml(parsedTrack)}</div>` +
           `<div class="spotify-artist">${escHtml(parsedArtist)}</div>`;
       } else {
         // nothing playing so keep the back content clear
