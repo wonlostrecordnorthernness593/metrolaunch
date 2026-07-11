@@ -209,7 +209,7 @@ const App = (() => {
     weatherLoading = true;
     weatherData = null;
     updateWeatherFace();
-    return fetch(`https://api.openweathermap.org/data/2.5/weather?zip=${encodeURIComponent(zip)},${settings.weatherCountry}&appid=${settings.weatherApiKey}&units=imperial`)
+    return fetch(`https://api.openweathermap.org/data/2.5/weather?zip=${encodeURIComponent(zip)},${settings.weatherCountry}&appid=${settings.weatherApiKey}&units=${settings.weatherUseCelsius ? 'metric' : 'imperial'}`)
       .then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
       .then(d => {
         if (!d.main) return;
@@ -225,7 +225,7 @@ const App = (() => {
         weatherData = {
           _zip: zip,
           location: d.name || zip,
-          temp: `${Math.round(d.main.temp)}\u00B0F`,
+          temp: `${Math.round(d.main.temp)}\u00B0${settings.weatherUseCelsius ? 'C' : 'F'}`,
           condition: d.weather?.length ? d.weather[0].main : '',
           bgUrl: fullBgUrl
         };
@@ -1788,6 +1788,10 @@ const App = (() => {
         <label>App URL (optional)</label>
         <input type="text" id="weather-url" value="${escHtml(tile.url)}" placeholder="e.g. weather://" autocomplete="off" autocapitalize="off">
       </div>
+      <div class="toggle-row">
+        <span class="toggle-label">Use Celsius</span>
+        <div class="toggle-switch${settings.weatherUseCelsius ? ' on' : ''}" id="weather-celsius-toggle"></div>
+      </div>
 
       <div class="form-group" id="weather-color-group" style="${settings.globalColorEnabled ? 'display:none' : ''}">
         <label>Color</label>
@@ -1802,12 +1806,21 @@ const App = (() => {
 
     attachColorPicker('color-picker-weather', 'weather-color');
 
+    let useCelsius = !!settings.weatherUseCelsius;
+    const celsiusToggle = document.getElementById('weather-celsius-toggle');
+    celsiusToggle.onclick = () => {
+      useCelsius = !useCelsius;
+      celsiusToggle.classList.toggle('on', useCelsius);
+    };
+
     document.getElementById('weather-cancel').onclick = hideModal;
     document.getElementById('weather-save').onclick = () => {
       const zip = document.getElementById('weather-zip').value.trim();
       settings.weatherZip = zip;
       settings.weatherApiKey = document.getElementById('weather-api').value.trim();
       settings.weatherCountry = document.getElementById('weather-country').value.trim().toLowerCase();
+      const unitsChanged = settings.weatherUseCelsius !== useCelsius;
+      settings.weatherUseCelsius = useCelsius;
       saveSettings();
       updateTile(WEATHER_TILE_ID, {
         size: document.getElementById('weather-size').value,
@@ -1815,6 +1828,10 @@ const App = (() => {
         url: document.getElementById('weather-url').value.trim()
       });
       startWeatherPolling();
+      if (unitsChanged) {
+        localStorage.removeItem(WEATHER_CACHE_KEY);
+        fetchWeather(settings.weatherZip);
+      }
       hideModal();
       showToast('Weather updated');
     };
