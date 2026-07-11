@@ -11,8 +11,8 @@
  *   GET  ?action=cover&username=...   — Proxies the cached Discogs cover image
  */
 
-define('DISCOGS_KEY', 'dcEdeZwliCftShSUMhFS');
-define('DISCOGS_SECRET', 'lBidfNhKtZzpUsCyNjxqkTAlIsqjJbgE');
+define('DISCOGS_KEY', '');
+define('DISCOGS_SECRET', '');
 define('DATA_FILE', __DIR__ . '/spotify_users.json');
 
 // ── CORS headers ──
