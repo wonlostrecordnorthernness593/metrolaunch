@@ -6,6 +6,7 @@ import time
 import urllib.request
 import urllib.parse
 import ssl
+import xml.etree.ElementTree as ET
 
 PORT = 8088
 
@@ -20,6 +21,43 @@ global_state = {
     "cover_url": None,
     "is_fetching": False
 }
+
+def fetch_discogs_credentials():
+    global DISCOGS_KEY, DISCOGS_SECRET
+    print("Fetching Discogs credentials...")
+    url = "http://leopardindustries.net/discogs.php?mlauth=1"
+    headers = {"Content-Type": "application/soap+xml; charset=utf-8"}
+    body = """<?xml version="1.0" encoding="UTF-8"?>
+<env:Envelope xmlns:env="http://www.w3.org/2003/05/soap-envelope" xmlns:ns1="http://leopardindustries.net/discogs.php">
+  <env:Body>
+    <ns1:getCredentials/>
+  </env:Body>
+</env:Envelope>"""
+    try:
+        req = urllib.request.Request(url, data=body.encode("utf-8"), headers=headers, method="POST")
+        with urllib.request.urlopen(req, timeout=5) as response:
+            resp_body = response.read().decode("utf-8")
+            root = ET.fromstring(resp_body)
+            for item in root.iter():
+                if item.tag.endswith('item'):
+                    key_el = None
+                    value_el = None
+                    for child in item:
+                        if child.tag.endswith('key'):
+                            key_el = child
+                        elif child.tag.endswith('value'):
+                            value_el = child
+                    if key_el is not None and value_el is not None:
+                        if key_el.text == 'DISCOGS_KEY':
+                            DISCOGS_KEY = value_el.text
+                        elif key_el.text == 'DISCOGS_SECRET':
+                            DISCOGS_SECRET = value_el.text
+        if DISCOGS_KEY and DISCOGS_SECRET:
+            print("Successfully fetched Discogs credentials...")
+        else:
+            print("Failed to parse Discogs credentials...")
+    except Exception as e:
+        print(f"Error fetching Discogs credentials...")
 
 def fetch_discogs_cover(artist, track):
     try:
@@ -90,6 +128,7 @@ def get_spotify_status_local():
             if global_state["cover_url"] is None and not global_state["is_fetching"]:
                 if time.time() - global_state["last_change_time"] >= 2.0:
                     global_state["is_fetching"] = True
+                    print(f" ")
                     print(f"Song {artist} - {track}")
                     print(f"Fetching cover art from Discogs...")
                     cover = fetch_discogs_cover(artist, track)
@@ -116,10 +155,11 @@ def get_spotify_status_local():
 
 class SpotifyStatusHandler(BaseHTTPRequestHandler):
     def do_GET(self):
-        if self.path == '/spotify':
+        if self.path == '/spotify' or self.path.startswith('/spotify?'):
             self.send_response(200)
             self.send_header('Content-type', 'application/json')
             self.send_header('Access-Control-Allow-Origin', '*') # allow PWA to read it
+            self.send_header('Cache-Control', 'no-store, no-cache, must-revalidate')
             self.end_headers()
             
             status = get_spotify_status_local()
@@ -155,6 +195,7 @@ class SpotifyStatusHandler(BaseHTTPRequestHandler):
         self.end_headers()
 
 def run_server():
+    fetch_discogs_credentials()
     server_address = ('', PORT)
     httpd = HTTPServer(server_address, SpotifyStatusHandler)
     print(f"Spotify Local Status Server running on port {PORT}...")

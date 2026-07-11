@@ -326,9 +326,9 @@ const App = (() => {
 
     const spTile = tiles.find(t => t.id === SPOTIFY_TILE_ID);
     const host = spTile?.spotifyServer || 'localhost';
-    const port = spTile?.spotifyPort || '8080';
+    const port = spTile?.spotifyPort || '8088';
 
-    fetch(`http://${host}:${port}/spotify`)
+    fetch(`http://${host}:${port}/spotify?t=${Date.now()}`, { cache: 'no-store' })
       .then(r => r.json())
       .then(d => {
         if (d.isPlaying) {
@@ -349,7 +349,7 @@ const App = (() => {
     if (!settings.spotifyEnabled) return;
 
     fetchSpotifyStatus(); // initial fetch
-    spotifyPollingInterval = setInterval(fetchSpotifyStatus, 3000); // poll every 3 seconds
+    spotifyPollingInterval = setInterval(fetchSpotifyStatus, 2000); // poll every 2 seconds
   }
 
   function updateSpotifyFace() {
@@ -1847,7 +1847,7 @@ const App = (() => {
       </div>
       <div class="form-group">
         <label>Server Port</label>
-        <input type="number" id="spotify-port" value="${escHtml(tile.spotifyPort || settings.spotifyPort || '8080')}" autocomplete="off" inputmode="numeric">
+        <input type="number" id="spotify-port" value="${escHtml(tile.spotifyPort || settings.spotifyPort || '8088')}" autocomplete="off" inputmode="numeric">
       </div>
       <div class="form-group">
         <label>App URL (optional)</label>
@@ -2389,7 +2389,7 @@ const App = (() => {
   function ensureSpotifyTile() {
     if (tiles.find(t => t.id === SPOTIFY_TILE_ID)) return;
     const spot = findNextFreeSpot('medium');
-    tiles.push({ id: SPOTIFY_TILE_ID, name: 'Spotify', icon: 'spotify', url: settings.spotifyUrl || 'spotify://', color: '#1db954', size: 'medium', col: spot.col, row: spot.row, isSpotify: true, spotifyServer: settings.spotifyServer || '', spotifyPort: settings.spotifyPort || '8080' });
+    tiles.push({ id: SPOTIFY_TILE_ID, name: 'Spotify', icon: 'spotify', url: settings.spotifyUrl || 'spotify://', color: '#1db954', size: 'medium', col: spot.col, row: spot.row, isSpotify: true, spotifyServer: settings.spotifyServer || '', spotifyPort: settings.spotifyPort || '8088' });
     save();
   }
 
