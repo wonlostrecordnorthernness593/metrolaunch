@@ -1,4 +1,4 @@
-## MetroLaunch
+## MetroLaunch    /    [click here to install](https://sawyerthemiller.github.io/metrolaunch/)
 A nicely-featured third party home screen for iOS in the style of Microsoft's old MetroUI... Built as a PWA, free forever, smooth animations, runnable offline, and hassle free updates. Uses the original Windows 8 weather images :)
 
 ![screenshot-a](https://i.ibb.co/9HNxBPN0/IMG-3137.png)
