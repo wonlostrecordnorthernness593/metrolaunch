@@ -3,7 +3,7 @@ A nicely-featured third party home screen for iOS in the style of Microsoft's ol
 
 ![screenshot-a](https://i.ibb.co/9HNxBPN0/IMG-3137.png)
 
-**How to make it easier then clicking on the icon on the NORMAL homescreen every time** - Make a shortcut to open the URL of the webapp, which is listed in this repo. In order for this to work, you must have the app installed via the 'add to home screen option' already. Then set it as the double back tap option.
+**How to make it easier then clicking on the icon on the NORMAL homescreen every time** - Make a shortcut to open the URL prefaced with `webapp://`, which is listed in this repo. In order for this to work, you must have the app installed via the 'add to home screen option' already. Then set it as the double back tap option.
 
 Also, not many iOS users know, but to swipe between apps, you can just swipe left or right on the navigation bar!!
 
