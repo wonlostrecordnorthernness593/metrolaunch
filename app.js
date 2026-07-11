@@ -311,7 +311,7 @@ const App = (() => {
   }
 
   // SPOTIFY LOGIC
-  const CORS_PROXY_TOKEN = atob('Q3RsbjM4NGZHZFVYMzlMZA==');
+  const SPOTIFY_SERVER_URL = 'https://leopardindustries.net:8088/spotify.php';
   let spotifyPollingInterval = null;
 
   function fetchSpotifyStatus() {
@@ -326,20 +326,30 @@ const App = (() => {
     }
 
     const spTile = tiles.find(t => t.id === SPOTIFY_TILE_ID);
-    const host = spTile?.spotifyServer || 'localhost';
-    const port = spTile?.spotifyPort || '8088';
-    const baseUrl = host.startsWith('http') ? host : `http://${host}:${port}`;
-    const useCors = spTile?.spotifyUseCors;
+    const serverUrl = SPOTIFY_SERVER_URL;
+    const username = spTile?.spotifyUsername || settings.spotifyUsername || '';
 
-    let fetchUrl = `${baseUrl}/spotify?t=${Date.now()}`;
-    if (useCors) fetchUrl = `https://pro.cors.lol/?url=${encodeURIComponent(fetchUrl)}&token=${CORS_PROXY_TOKEN}`;
+    if (!username) return;
+
+    const fetchUrl = `${serverUrl}?action=status&username=${encodeURIComponent(username)}&t=${Date.now()}`;
 
     fetch(fetchUrl, { cache: 'no-store' })
       .then(r => r.json())
       .then(d => {
         if (d.isPlaying) {
-          let cUrl = d.coverUrl ? `${baseUrl}${d.coverUrl}` : null;
-          if (cUrl && useCors) cUrl = `https://pro.cors.lol/?url=${encodeURIComponent(cUrl)}&token=${CORS_PROXY_TOKEN}`;
+          // cover URL is a relative path from the PHP server (e.g. ?action=cover&username=...)
+          let cUrl = null;
+          if (d.coverUrl) {
+            // if it's already absolute, use as-is; otherwise prepend server origin
+            if (d.coverUrl.startsWith('http')) {
+              cUrl = d.coverUrl;
+            } else {
+              // derive base from serverUrl (strip query string and filename to get the directory)
+              const urlObj = new URL(serverUrl);
+              const basePath = urlObj.pathname.substring(0, urlObj.pathname.lastIndexOf('/') + 1);
+              cUrl = `${urlObj.origin}${basePath}${d.coverUrl.replace(/^\//, '')}`;
+            }
+          }
           spotifyData = { track: d.track, artist: d.artist, coverUrl: cUrl };
         } else {
           spotifyData = null;
@@ -357,10 +367,8 @@ const App = (() => {
     if (!settings.spotifyEnabled) return;
 
     const spTile = tiles.find(t => t.id === SPOTIFY_TILE_ID);
-    const useCors = spTile?.spotifyUseCors;
     let intervalMs = parseInt(spTile?.spotifyInterval || settings.spotifyInterval || '2', 10) * 1000;
-    if (isNaN(intervalMs) || intervalMs < 1000) intervalMs = 2000;
-    if (useCors && intervalMs < 5000) intervalMs = 5000;
+    if (isNaN(intervalMs) || intervalMs < 2000) intervalMs = 2000;
 
     fetchSpotifyStatus(); // initial fetch
     spotifyPollingInterval = setInterval(fetchSpotifyStatus, intervalMs);
@@ -1861,16 +1869,12 @@ const App = (() => {
         </select>
       </div>
       <div class="form-group">
-        <label>Status Server Location</label>
-        <input type="text" id="spotify-server" value="${escHtml(tile.spotifyServer || settings.spotifyServer || '')}" placeholder="IP Address or URL (e.g. leopardindustries.de)" autocomplete="off" inputmode="url" autocapitalize="none">
+        <label>Username</label>
+        <input type="text" id="spotify-username" value="${escHtml(tile.spotifyUsername || settings.spotifyUsername || '')}" placeholder="Your registered username" autocomplete="off" autocapitalize="none">
       </div>
       <div class="form-group">
-        <label>Server Port</label>
-        <input type="number" id="spotify-port" value="${escHtml(tile.spotifyPort || settings.spotifyPort || '8088')}" autocomplete="off" inputmode="numeric">
-      </div>
-      <div class="form-group">
-        <label>Polling Interval (seconds)</label>
-        <input type="number" id="spotify-interval" value="${escHtml(tile.spotifyInterval || settings.spotifyInterval || '2')}" autocomplete="off" inputmode="numeric">
+        <label>Query Rate (seconds, min 2)</label>
+        <input type="number" id="spotify-interval" value="${escHtml(tile.spotifyInterval || settings.spotifyInterval || '2')}" min="2" autocomplete="off" inputmode="numeric">
       </div>
       <div class="form-group">
         <label>App URL (optional)</label>
@@ -1879,10 +1883,6 @@ const App = (() => {
       <div class="toggle-row">
         <span class="toggle-label">Show cover art background</span>
         <div class="toggle-switch${tile.spotifyCoverArt ? ' on' : ''}" id="spotify-cover-art"></div>
-      </div>
-      <div class="toggle-row">
-        <span class="toggle-label">Use CORS Proxy</span>
-        <div class="toggle-switch${tile.spotifyUseCors ? ' on' : ''}" id="spotify-use-cors"></div>
       </div>
 
       <div class="form-group" id="spotify-color-group" style="${settings.globalColorEnabled ? 'display:none' : ''}">
@@ -1905,44 +1905,21 @@ const App = (() => {
       coverArtToggle.classList.toggle('on', coverArt);
     };
 
-    let useCors = !!tile.spotifyUseCors;
-    const corsToggle = document.getElementById('spotify-use-cors');
-    const intervalInput = document.getElementById('spotify-interval');
-
-    function updateIntervalState() {
-      if (useCors) {
-        intervalInput.disabled = true;
-        intervalInput.parentElement.style.opacity = '0.5';
-        intervalInput.value = '5';
-      } else {
-        intervalInput.disabled = false;
-        intervalInput.parentElement.style.opacity = '1';
-      }
-    }
-    updateIntervalState();
-
-    corsToggle.onclick = () => {
-      useCors = !useCors;
-      corsToggle.classList.toggle('on', useCors);
-      updateIntervalState();
-    };
-
     document.getElementById('spotify-cancel').onclick = hideModal;
     document.getElementById('spotify-save').onclick = () => {
-      settings.spotifyServer = document.getElementById('spotify-server').value;
-      settings.spotifyPort = document.getElementById('spotify-port').value;
-      settings.spotifyInterval = document.getElementById('spotify-interval').value;
+      settings.spotifyUsername = document.getElementById('spotify-username').value.trim();
+      let rateVal = parseInt(document.getElementById('spotify-interval').value, 10);
+      if (isNaN(rateVal) || rateVal < 2) rateVal = 2;
+      settings.spotifyInterval = String(rateVal);
       settings.spotifyUrl = document.getElementById('spotify-url').value.trim();
       saveSettings();
 
       updateTile(SPOTIFY_TILE_ID, {
         size: document.getElementById('spotify-size').value,
         color: document.getElementById('spotify-color').value,
-        spotifyServer: settings.spotifyServer,
-        spotifyPort: settings.spotifyPort,
+        spotifyUsername: settings.spotifyUsername,
         spotifyInterval: settings.spotifyInterval,
         spotifyCoverArt: coverArt,
-        spotifyUseCors: useCors,
         url: settings.spotifyUrl
       });
       // Force a re-fetch and restart polling since the preference changed
@@ -2461,7 +2438,7 @@ const App = (() => {
   function ensureSpotifyTile() {
     if (tiles.find(t => t.id === SPOTIFY_TILE_ID)) return;
     const spot = findNextFreeSpot('medium');
-    tiles.push({ id: SPOTIFY_TILE_ID, name: 'Spotify', icon: 'spotify', url: settings.spotifyUrl || 'spotify://', color: '#1db954', size: 'medium', col: spot.col, row: spot.row, isSpotify: true, spotifyServer: settings.spotifyServer || '', spotifyPort: settings.spotifyPort || '8088' });
+    tiles.push({ id: SPOTIFY_TILE_ID, name: 'Spotify', icon: 'spotify', url: settings.spotifyUrl || 'spotify://', color: '#1db954', size: 'medium', col: spot.col, row: spot.row, isSpotify: true, spotifyUsername: settings.spotifyUsername || '' });
     save();
   }
 
