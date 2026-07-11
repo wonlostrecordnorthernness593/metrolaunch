@@ -23,14 +23,14 @@ Please fully read the readme before installing and using the launcher...
 **So why do we have to** 
 - Apple in their infinite wisdom has disallowed enumerating other apps on the device and opening them 'just because' and usually requires some sort of intent
 - Hence, a weather app may have a scheme like `weather-app-best://getforloc=milwaukee` - note that is a pretty crude example but the point is the same
-- Thanfully, opening an app with nothing in the url scheme usally works just fine. For example `Netflix://` will just open Netflix
+- Thanfully, opening an app with nothing in the url scheme usally works just fine. For example `netflix://` will just open the app `Netflix`
 
 **How can I get them** 
 - Sometimes you get lucky and it is just the app name with a `://` after it, or it is just the Bundle ID
 - Other times, it's completely random gibberish. For example, the url scheme for the app `What The Forecast` is `fb1682603758661443://` so sometimes it is very hard to find them
 - Usually there is lists online for them, but they usually don't have all the apps you'd want
 
-## Ways to get that are easier then guessing
+## Ways to get them that are easier then guessing
 
 **Download the theming app 'Brass'** 
 - You can add apps to the home screen with it through a configuration profile and hold them on the home screen, press share, then copy link
@@ -41,7 +41,7 @@ Please fully read the readme before installing and using the launcher...
 - Simply make a shortcut in the Apple Shortcuts app to open an app, and name it something simple like 'SC1' or 'SC2'
 - Then, in the launcher, you can use the scheme `shortcuts://run-shortcut?name=[name]` and there will be no app this won't work with
 
-## Spotify integration
+## Spotify tile integration
 
 - You need a Mac running python3 for this server part.
 - Spotify is currently being a douche after a certain shadow library dumped all of their content and has halted new app creation. I am looking for a better way around this but don't hold your breath.
@@ -51,13 +51,13 @@ Please fully read the readme before installing and using the launcher...
 
 I am working on making a Windows and Linux server version...
 
-## Using the app
+## Using the launcher
 
 - You will need an [OpenWeatherMap](https://openweathermap.org/) API key if you want the weather tile to work.
 - The app will tell you how to do it.
 
 To access the menu to add an app or go to the settings, press the vertical elipses menu in the status bar, and chose your option from there. To update the app, go the the settings cache section, then press update. Thanks for cheking this out everybody :)
 
-## Contributing
+## Contributing to the project
 
 Anything is welcome, just please be nice to others and if you take code from somehwere ensure you have permission to do so, as I want to give credit where it's due...
