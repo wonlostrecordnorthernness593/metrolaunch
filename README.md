@@ -45,8 +45,7 @@ Please fully read the readme before installing and using the launcher...
 
 - You need a Mac running python3 for this server part.
 - Spotify is currently being a douche after a certain shadow library dumped all of their content and has halted new app creation. I am looking for a better way around this but don't hold your breath.
-- Make sure you put your free [Discogs](https://www.discogs.com/) API key in the conifg section of the python file and have the Spotify app running on your Mac.
-- Then in the Spotify live tile's settings, configure the server IP and port.
+- Then in the Spotify live tile settings, configure the server IP and port.
 - You may want to use something like [Tailscale](https://tailscale.com/) so you'll always be able to access it.
 
 I am working on making a Windows and Linux server version...
