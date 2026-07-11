@@ -1,5 +1,5 @@
 ## MetroLaunch
-A nicely-featured third party home screen for iOS in the style of Microsoft's old MetroUI... Built as a PWA, free forever, smooth animations, runnable offline, and hassle free updates.
+A nicely-featured third party home screen for iOS in the style of Microsoft's old MetroUI... Built as a PWA, free forever, smooth animations, runnable offline, and hassle free updates. Uses the original Windows 8 weather images :)
 
 ![screenshot-a](https://i.ibb.co/9HNxBPN0/IMG-3137.png)
 
@@ -13,7 +13,7 @@ Please fully read the readme before installing and using the launcher...
 
 **What is a URL Scheme** - URL schema are links that are able to reference other apps installed on your device. Both Android and iOS have them, but Android launchers don't usually ever need to rely on them
 
-**So why do we have to** - Apple in their infinite wisdom has disallowed enumerating other apps on the device and opening them 'just because' and usually requires some sort of intent. Hence, a weather app may have a scheme like `weather-app-best://getforloc=milwaukee` - Note that that is a pretty crude example but the point is the same. Thanfully, opening an app with nothing in the url scheme usally works just fine. For example `netflix://` will just open netflix
+**So why do we have to** - Apple in their infinite wisdom has disallowed enumerating other apps on the device and opening them 'just because' and usually requires some sort of intent. Hence, a weather app may have a scheme like `weather-app-best://getforloc=milwaukee` - Note that that is a pretty crude example but the point is the same. Thanfully, opening an app with nothing in the url scheme usally works just fine. For example `netflix://` will just open Netflix
 
 **How can I get them** - Sometimes you get lucky and it is just the app name with a `://` after it. Other times it is the Bundle ID. Or sometimes, it's completely random gibberish. For example, the url scheme for the app 'What The Forecast' is `fb1682603758661443://` so sometimes it is very hard to find them. Oftentimes there is lists online for them, but they usually don't have all the apps you'd want
 
