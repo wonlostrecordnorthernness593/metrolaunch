@@ -76,7 +76,7 @@ def fetch_discogs_cover(artist, track):
             data = json.loads(response.read().decode())
             results = data.get('results', [])
             if results:
-                # Discogs `cover_image` is usually the full size, `thumb` is smaller.
+                # Discogs `cover_image` is usually the full size
                 cover = results[0].get('cover_image')
                 if cover and "spacer.gif" not in cover:
                     return cover
