@@ -383,6 +383,7 @@ const App = (() => {
 
         let parsedTrack = spotifyData.track.replace(/[',.;:+!?]/g, '');
         parsedTrack = parsedTrack.replace(/\bfeat\b/gi, 'Feat');
+        parsedTrack = parsedTrack.replace(/\bwith\b/gi, 'With');
         parsedTrack = parsedTrack.replace(/\bpt\b/gi, 'PT');
 
         el.innerHTML =
@@ -2137,13 +2138,33 @@ const App = (() => {
 
     let hdcEnabled = !!settings.hideDynamicContent;
     const hdcToggle = document.getElementById('hdc-toggle');
+    
+    let lhOn = !!settings.lightHeader;
+    const lhToggle = document.getElementById('light-header-toggle');
+    const lhRow = lhToggle.parentElement;
+
+    function updateLhState() {
+      if (hdcEnabled) {
+        if (lhOn) {
+          lhOn = false;
+          lhToggle.classList.remove('on');
+        }
+        lhRow.style.opacity = '0.5';
+        lhRow.style.pointerEvents = 'none';
+      } else {
+        lhRow.style.opacity = '1';
+        lhRow.style.pointerEvents = 'auto';
+      }
+    }
+
+    updateLhState();
+
     hdcToggle.onclick = () => {
       hdcEnabled = !hdcEnabled;
       hdcToggle.classList.toggle('on', hdcEnabled);
+      updateLhState();
     };
 
-    let lhOn = !!settings.lightHeader;
-    const lhToggle = document.getElementById('light-header-toggle');
     lhToggle.onclick = () => {
       lhOn = !lhOn;
       lhToggle.classList.toggle('on', lhOn);
