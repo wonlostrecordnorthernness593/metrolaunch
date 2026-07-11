@@ -380,7 +380,7 @@ const App = (() => {
         let parsedArtist = spotifyData.artist.replace(/P!NK/gi, 'PINK');
         parsedArtist = parsedArtist.replace(/[!.]+$/g, '').replace(/!/g, '');
 
-        let parsedTrack = spotifyData.track.replace(/[',.;:+?]/g, '');
+        let parsedTrack = spotifyData.track.replace(/[',.;:+!?]/g, '');
         parsedTrack = parsedTrack.replace(/\bfeat\b/gi, 'Feat');
 
         el.innerHTML =
