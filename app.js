@@ -1162,13 +1162,25 @@ const App = (() => {
   }
 
   /**
-   * Nuke all caches and unregister every service worker, then wait for the controller to truly release
+   * Nuke all caches and unregister every service worker, then force the browser HTTP cache
+   * to grab fresh files before reloading - fix for stale updates
    */
   async function nukeServiceWorkerAndCaches() {
     try {
       const names = await caches.keys();
       await Promise.all(names.map(n => caches.delete(n)));
     } catch { /* cache API may not be available */ }
+
+    // Bust the HTTP cache before reloading, forcing the old SW (which is still alive)
+    // to fetch and cache the fresh files from the network instead of the HTTP cache
+    const criticalFiles = [
+      './', './index.html', './style.css', './app.js',
+      './services/weather.js', './services/news.js', './services/spotify.js',
+      './version.txt'
+    ];
+    try {
+      await Promise.all(criticalFiles.map(url => fetch(url, { cache: 'reload' }).catch(() => {})));
+    } catch { }
 
     if (!navigator.serviceWorker) return;
 
@@ -1178,13 +1190,13 @@ const App = (() => {
       await Promise.all(regs.map(r => r.unregister()));
     } catch { /* SW API may not be available */ }
 
-    // Wait for the controller to actually release
+    // Wait for the controller to actually release (fallback to timeout)
     if (navigator.serviceWorker.controller) {
       await Promise.race([
         new Promise(resolve => {
           navigator.serviceWorker.addEventListener('controllerchange', resolve, { once: true });
         }),
-        new Promise(resolve => setTimeout(resolve, 2000)),
+        new Promise(resolve => setTimeout(resolve, 500)),
       ]);
     }
   }
