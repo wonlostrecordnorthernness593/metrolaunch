@@ -1809,7 +1809,7 @@ const App = (() => {
       <h2>Settings</h2>
 
       <div class="modal-actions" style="margin-bottom:12px;">
-        <button class="btn-secondary" id="settings-reset" style="color:#ff6b6b; border-color:#ff6b6b;">Reset Launcher</button>
+        <button class="btn-secondary" id="settings-reset" style="color:#ff9800; border-color:#ff9800;">Reset Launcher</button>
       </div>
       <div class="modal-actions" style="margin-bottom:12px;">
         <button class="btn-secondary" id="settings-backup">Backup Launcher Data</button>
@@ -1932,10 +1932,10 @@ const App = (() => {
       <div class="section-body${sectionClass('cache')}" id="sec-cache">
         <div class="modal-actions" style="margin-bottom:8px;">
           <button class="btn-secondary" id="settings-sw-check">Service Worker Check</button>
-          <button class="btn-secondary" id="settings-purge-cache" style="color:#ff9800; border-color:#ff9800;">Update App</button>
+          <button class="btn-secondary" id="settings-purge-cache" style="color:#0078d4; border-color:#0078d4;">Update App</button>
         </div>
         <div class="modal-actions" style="margin-bottom:0;">
-          <button class="btn-secondary" id="settings-uninstall" style="color:#0078d4; border-color:#0078d4;">!! Uninstall !!</button>
+          <button class="btn-secondary" id="settings-uninstall" style="color:#ff6b6b; border-color:#ff6b6b;">!! Uninstall !!</button>
         </div>
       </div>
 
@@ -2079,7 +2079,8 @@ const App = (() => {
         'Reset Launcher',
         'This will erase all tiles, settings, and cached data. This cannot be undone.',
         'Reset',
-        () => { localStorage.clear(); window.location.reload(); }
+        () => { localStorage.clear(); window.location.reload(); },
+        '#ff9800'
       );
     };
 
@@ -2152,7 +2153,7 @@ const App = (() => {
           await nukeServiceWorkerAndCaches();
           location.reload();
         },
-        '#ff9800'
+        '#0078d4'
       );
     };
 
@@ -2246,8 +2247,7 @@ const App = (() => {
           setTimeout(() => {
             document.documentElement.innerHTML = '';
           }, 100);
-        },
-        '#0078d4'
+        }
       );
     };
 
