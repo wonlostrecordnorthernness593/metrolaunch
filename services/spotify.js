@@ -1,0 +1,181 @@
+/* ================================================================
+   METRO LAUNCHER — Spotify Service
+   ----------------------------------------------------------------
+   Owns polling of the Leopard status endpoint, the "Test" connection
+   check, DOM rendering of the Spotify live tile, and the artist/
+   track text cleaners.
+   ================================================================ */
+
+(function () {
+  const TILE_ID = '__spotify__';
+  const SERVER_URL = 'https://leopardindustries.net:8088/spotify.php';
+  const MIN_INTERVAL_MS = 2000;
+
+  let deps = null;
+  let data = null;
+  let pollTimer = null;
+
+  // Text cleaning regex numero dos
+
+  function cleanArtistName(artist) {
+    if (!artist) return '';
+    let parsed = artist.replace(/P!NK/gi, 'PINK');
+    parsed = parsed.replace(/[!.]+$/g, '').replace(/!/g, '');
+    return parsed;
+  }
+
+  function cleanTrackName(track) {
+    if (!track) return '';
+    let parsed = track.replace(/[',.;:+!?]/g, '');
+    parsed = parsed.replace(/\bfeat\b/gi, 'Featuring');
+    parsed = parsed.replace(/\bwith\b/gi, 'With');
+    parsed = parsed.replace(/\bpt\b/gi, 'PT');
+    return parsed;
+  }
+
+  function init(injected) {
+    deps = injected;
+  }
+
+  // When playback stops we want to keep the old back-face content visible while the tile flips
+  const FLIP_MS = 550;
+
+  function handlePlaybackChange(hadData) {
+    // snap the tile straight to its front face
+    if (hadData && data === null && deps.snapToFront) {
+      deps.snapToFront(TILE_ID);
+      setTimeout(updateFace, FLIP_MS);
+    } else {
+      updateFace();
+    }
+  }
+
+  function fetchData() {
+    const settings = deps.getSettings();
+
+    if (!settings.spotifyEnabled) {
+      const hadData = data !== null;
+      data = null;
+      handlePlaybackChange(hadData);
+      stop();
+      return Promise.resolve();
+    }
+
+    // Skip network attempts while offline
+    if (!navigator.onLine) return Promise.resolve();
+
+    const tile = deps.getTile(TILE_ID);
+    const username = tile?.spotifyUsername || settings.spotifyUsername || '';
+    if (!username) return Promise.resolve();
+
+    const url = `${SERVER_URL}?action=status&username=${encodeURIComponent(username)}&t=${Date.now()}`;
+
+    // Snapshot playback state BEFORE the async call
+    const hadDataBefore = data !== null;
+
+    return fetch(url, { cache: 'no-store' })
+      .then(r => r.json())
+      .then(d => {
+        if (d.isPlaying) {
+          let cUrl = null;
+          if (d.coverUrl) {
+            if (d.coverUrl.startsWith('http')) {
+              cUrl = d.coverUrl;
+            } else {
+              // coverUrl is a relative path
+              const urlObj = new URL(SERVER_URL);
+              const basePath = urlObj.pathname.substring(0, urlObj.pathname.lastIndexOf('/') + 1);
+              cUrl = `${urlObj.origin}${basePath}${d.coverUrl.replace(/^\//, '')}`;
+            }
+          }
+          data = { track: d.track, artist: d.artist, coverUrl: cUrl };
+        } else {
+          data = null;
+        }
+        handlePlaybackChange(hadDataBefore);
+      })
+      .catch(() => {
+        data = null;
+        handlePlaybackChange(hadDataBefore);
+      });
+  }
+
+  function updateFace() {
+    const escHtml = deps.escHtml;
+    const tile = deps.getTile(TILE_ID);
+    const showCover = !!tile?.spotifyCoverArt;
+    const offline = !navigator.onLine;
+
+    document.querySelectorAll('.spotify-content').forEach(el => {
+      if (offline || !data) {
+        // blank while offline or when nothing is playing - once we're back
+        // online the poll interval / online listener will refetch and
+        // repaint the tile automatically
+        el.innerHTML = '';
+        return;
+      }
+
+      let bgStyle = '';
+      if (showCover && data.coverUrl) {
+        bgStyle = ` style="background-image: url('${escHtml(data.coverUrl)}');"`;
+      }
+
+      const parsedArtist = cleanArtistName(data.artist);
+      const parsedTrack = cleanTrackName(data.track);
+
+      el.innerHTML =
+        `<div class="spotify-bg-blur"${bgStyle}></div>` +
+        `<div class="spotify-track">${escHtml(parsedTrack)}</div>` +
+        `<div class="spotify-artist">${escHtml(parsedArtist)}</div>`;
+    });
+  }
+
+  function start() {
+    stop();
+    const settings = deps.getSettings();
+    if (!settings.spotifyEnabled) return;
+
+    const tile = deps.getTile(TILE_ID);
+    let intervalMs = parseInt(tile?.spotifyInterval || settings.spotifyInterval || '2', 10) * 1000;
+    if (isNaN(intervalMs) || intervalMs < MIN_INTERVAL_MS) intervalMs = MIN_INTERVAL_MS;
+
+    fetchData();
+    pollTimer = setInterval(fetchData, intervalMs);
+  }
+
+  function stop() {
+    if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+  }
+
+  /**
+   * Simple reachability check for the Leopard server
+   */
+  function testConnection() {
+    if (!navigator.onLine) {
+      return Promise.resolve({ ok: false, reason: 'offline' });
+    }
+    return fetch(`${SERVER_URL}?t=${Date.now()}`, { cache: 'no-store' })
+      .then(resp => resp.ok ? { ok: true } : { ok: false, reason: `status-${resp.status}` })
+      .catch(() => ({ ok: false, reason: 'network' }));
+  }
+
+  function isRunning() {
+    return pollTimer !== null;
+  }
+
+  window.SpotifyService = {
+    TILE_ID,
+    SERVER_URL,
+    init,
+    fetchData,
+    updateFace,
+    start,
+    stop,
+    testConnection,
+    isRunning,
+    cleanArtistName,
+    cleanTrackName,
+    getData: () => data,
+    hasData: () => data !== null,
+  };
+})();

@@ -84,6 +84,8 @@ const App = (() => {
   const HUE_NAMES = Object.keys(COLOR_PALETTE);
   const ALL_COLORS = HUE_NAMES.flatMap(h => COLOR_PALETTE[h]);
 
+  // reusable text cleaners for live-tile content live inside their respective services
+
   // SVG Icon Library (Bootstrap Icons)
   const ICONS = {
     phone: '<svg viewBox="0 0 16 16"><path fill-rule="evenodd" d="M1.885.511a1.745 1.745 0 0 1 2.61.163L6.29 2.98c.329.423.445.974.315 1.494l-.547 2.19a.68.68 0 0 0 .178.643l2.457 2.457a.68.68 0 0 0 .644.178l2.189-.547a1.75 1.75 0 0 1 1.494.315l2.306 1.794c.829.645.905 1.87.163 2.611l-1.034 1.034c-.74.74-1.846 1.065-2.877.702a18.6 18.6 0 0 1-7.01-4.42 18.6 18.6 0 0 1-4.42-7.009c-.362-1.03-.037-2.137.703-2.877z"/></svg>',
@@ -162,262 +164,17 @@ const App = (() => {
     return ICONS[name] || ICONS.cube;
   }
 
-  // Live Tiles Logic (Weather + News + Spotify)
-  const WEATHER_TILE_ID = '__weather__';
-  const NEWS_TILE_ID = '__news__';
-  const SPOTIFY_TILE_ID = '__spotify__';
-  const WEATHER_CACHE_KEY = 'metro_weather_cache_v2';
-  const NEWS_CACHE_KEY = 'metro_news_cache';
-  const WEATHER_TTL = 5 * 60 * 1000;         // 5 mins
-  const NEWS_TTL = 60 * 60 * 1000;           // 1 hour
-  let weatherData = null;
-  let newsData = [];
-  let newsIndex = 0;
-  let spotifyData = null;                    // Live track / artist
+  // Refactored to seperate sevice files...
+
+  const WEATHER_TILE_ID = window.WeatherService.TILE_ID;
+  const NEWS_TILE_ID = window.NewsService.TILE_ID;
+  const SPOTIFY_TILE_ID = window.SpotifyService.TILE_ID;
   let liveTileIntervals = [];
 
   function isWeatherTile(t) { return t && t.id === WEATHER_TILE_ID; }
   function isNewsTile(t) { return t && t.id === NEWS_TILE_ID; }
   function isSpotifyTile(t) { return t && t.id === SPOTIFY_TILE_ID; }
   function isSpecialTile(t) { return isWeatherTile(t) || isNewsTile(t) || isSpotifyTile(t); }
-
-  // CACHING HELPERS
-  function cacheGet(key, ttl) {
-    try {
-      const raw = localStorage.getItem(key);
-      if (!raw) return null;
-      const obj = JSON.parse(raw);
-      if (Date.now() - obj.ts > ttl) return null;
-      return obj.data;
-    } catch { return null; }
-  }
-  function cacheSet(key, data) {
-    try { localStorage.setItem(key, JSON.stringify({ ts: Date.now(), data })); } catch { }
-  }
-
-  let weatherLoading = false;
-
-  function fetchWeather(zip) {
-    if (!zip || !settings.weatherApiKey || !settings.weatherCountry) { weatherData = null; weatherLoading = false; updateWeatherFace(); return Promise.resolve(); }
-    const cached = cacheGet(WEATHER_CACHE_KEY, WEATHER_TTL);
-    if (cached && cached._zip === zip) {
-      weatherData = cached;
-      weatherLoading = false;
-      updateWeatherFace();
-      return Promise.resolve();
-    }
-    weatherLoading = true;
-    weatherData = null;
-    updateWeatherFace();
-    return fetch(`https://api.openweathermap.org/data/2.5/weather?zip=${encodeURIComponent(zip)},${settings.weatherCountry}&appid=${settings.weatherApiKey}&units=${settings.weatherUseCelsius ? 'metric' : 'imperial'}`)
-      .then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
-      .then(d => {
-        if (!d.main) return;
-
-        const iconCode = d.weather?.length ? d.weather[0].icon : '01d';
-
-        // determine if have exact file, otherwise use the closest fallback
-        const availableIcons = ["01d", "01n", "02d", "02n", "03d", "03n", "04d", "04n", "09d", "09n", "10d", "10n", "11d", "11n", "13d", "13n", "50d", "50n"];
-        const mappedIcon = availableIcons.includes(iconCode) ? iconCode : '01d';
-
-        const fullBgUrl = `./weather_bg/${mappedIcon}.jpg`;
-
-        weatherData = {
-          _zip: zip,
-          location: d.name || zip,
-          temp: `${Math.round(d.main.temp)} \u00B0${settings.weatherUseCelsius ? 'C' : 'F'}`,
-          condition: d.weather?.length ? d.weather[0].main : '',
-          bgUrl: fullBgUrl
-        };
-        weatherLoading = false;
-        cacheSet(WEATHER_CACHE_KEY, weatherData);
-        updateWeatherFace();
-      })
-      .catch(() => { weatherData = null; weatherLoading = false; updateWeatherFace(); });
-  }
-
-  function updateWeatherFace() {
-    document.querySelectorAll('.weather-back-content').forEach(el => {
-      if (weatherData) {
-        let bgStyle = '';
-        if (weatherData.bgUrl) {
-          bgStyle = ` style="background-image: url('${escHtml(weatherData.bgUrl)}');"`;
-        }
-
-        el.innerHTML =
-          `<div class="weather-bg-blur"${bgStyle}></div>` +
-          `<div class="weather-location">${escHtml(weatherData.location)}</div>` +
-          `<div class="weather-temp">${escHtml(weatherData.temp)}</div>` +
-          `<div class="weather-condition">${escHtml(weatherData.condition)}</div>`;
-      } else if (weatherLoading) {
-        el.innerHTML = '<div class="weather-nodata">Loading weather\u2026</div>';
-      } else {
-        el.innerHTML = '<div class="weather-nodata">Set zip code in tile settings</div>';
-      }
-    });
-  }
-
-  let weatherPollingInterval = null;
-  function startWeatherPolling() {
-    if (weatherPollingInterval) clearInterval(weatherPollingInterval);
-    if (!settings.weatherZip) return;
-    fetchWeather(settings.weatherZip);
-    weatherPollingInterval = setInterval(() => {
-      localStorage.removeItem(WEATHER_CACHE_KEY);
-      fetchWeather(settings.weatherZip);
-    }, WEATHER_TTL);
-  }
-
-  function fetchNews() {
-    const cached = cacheGet(NEWS_CACHE_KEY, NEWS_TTL);
-    if (cached?.length) {
-      newsData = cached;
-      newsIndex = 0;
-      updateNewsFace();
-      return Promise.resolve();
-    }
-    return fetch('https://hacker-news.firebaseio.com/v0/topstories.json')
-      .then(r => r.json())
-      .then(ids => {
-        const top = ids.slice(0, 15);
-        return Promise.all(top.map(id =>
-          fetch(`https://hacker-news.firebaseio.com/v0/item/${id}.json`).then(r => r.json())
-        ));
-      })
-      .then(stories => {
-        newsData = stories
-          .filter(s => s?.title && s.url)
-          .map(s => ({ title: s.title, url: s.url }));
-        cacheSet(NEWS_CACHE_KEY, newsData);
-        newsIndex = 0;
-        updateNewsFace();
-      })
-      .catch(() => { newsData = []; updateNewsFace(); });
-  }
-
-  function currentNewsItem() {
-    return newsData.length ? newsData[newsIndex % newsData.length] : null;
-  }
-
-  let newsPollingInterval = null;
-  function startNewsPolling() {
-    if (newsPollingInterval) clearInterval(newsPollingInterval);
-    if (!settings.newsEnabled) return;
-    fetchNews();
-    newsPollingInterval = setInterval(() => {
-      localStorage.removeItem(NEWS_CACHE_KEY);
-      fetchNews();
-    }, NEWS_TTL);
-  }
-
-  // SPOTIFY LOGIC
-  const SPOTIFY_SERVER_URL = 'https://leopardindustries.net:8088/spotify.php';
-  let spotifyPollingInterval = null;
-
-  function fetchSpotifyStatus() {
-    if (!settings.spotifyEnabled) {
-      spotifyData = null;
-      updateSpotifyFace();
-      if (spotifyPollingInterval) {
-        clearInterval(spotifyPollingInterval);
-        spotifyPollingInterval = null;
-      }
-      return;
-    }
-
-    const spTile = tiles.find(t => t.id === SPOTIFY_TILE_ID);
-    const serverUrl = SPOTIFY_SERVER_URL;
-    const username = spTile?.spotifyUsername || settings.spotifyUsername || '';
-
-    if (!username) return;
-
-    const fetchUrl = `${serverUrl}?action=status&username=${encodeURIComponent(username)}&t=${Date.now()}`;
-
-    fetch(fetchUrl, { cache: 'no-store' })
-      .then(r => r.json())
-      .then(d => {
-        if (d.isPlaying) {
-          // cover URL is a relative path from the PHP server (e.g. ?action=cover&username=...)
-          let cUrl = null;
-          if (d.coverUrl) {
-            // if it's already absolute, use as-is; otherwise prepend server origin
-            if (d.coverUrl.startsWith('http')) {
-              cUrl = d.coverUrl;
-            } else {
-              // derive base from serverUrl (strip query string and filename to get the directory)
-              const urlObj = new URL(serverUrl);
-              const basePath = urlObj.pathname.substring(0, urlObj.pathname.lastIndexOf('/') + 1);
-              cUrl = `${urlObj.origin}${basePath}${d.coverUrl.replace(/^\//, '')}`;
-            }
-          }
-          spotifyData = { track: d.track, artist: d.artist, coverUrl: cUrl };
-        } else {
-          spotifyData = null;
-        }
-        updateSpotifyFace();
-      })
-      .catch(() => {
-        spotifyData = null;
-        updateSpotifyFace();
-      });
-  }
-
-  function startSpotifyPolling() {
-    if (spotifyPollingInterval) clearInterval(spotifyPollingInterval);
-    if (!settings.spotifyEnabled) return;
-
-    const spTile = tiles.find(t => t.id === SPOTIFY_TILE_ID);
-    let intervalMs = parseInt(spTile?.spotifyInterval || settings.spotifyInterval || '2', 10) * 1000;
-    if (isNaN(intervalMs) || intervalMs < 2000) intervalMs = 2000;
-
-    fetchSpotifyStatus(); // initial fetch
-    spotifyPollingInterval = setInterval(fetchSpotifyStatus, intervalMs);
-  }
-
-  function updateSpotifyFace() {
-    const spTile = tiles.find(t => t.id === SPOTIFY_TILE_ID);
-    const showCover = spTile?.spotifyCoverArt;
-
-    document.querySelectorAll('.spotify-content').forEach(el => {
-      if (spotifyData) {
-        let bgStyle = '';
-        if (showCover && spotifyData.coverUrl) {
-          bgStyle = ` style="background-image: url('${escHtml(spotifyData.coverUrl)}');"`;
-        }
-
-        // per artist name changes
-        let parsedArtist = spotifyData.artist.replace(/P!NK/gi, 'PINK');
-        parsedArtist = parsedArtist.replace(/[!.]+$/g, '').replace(/!/g, '');
-
-        let parsedTrack = spotifyData.track.replace(/[',.;:+!?]/g, '');
-        parsedTrack = parsedTrack.replace(/\bfeat\b/gi, 'Feat');
-        parsedTrack = parsedTrack.replace(/\bwith\b/gi, 'With');
-        parsedTrack = parsedTrack.replace(/\bpt\b/gi, 'PT');
-
-        el.innerHTML =
-          `<div class="spotify-bg-blur"${bgStyle}></div>` +
-          `<div class="spotify-track">${escHtml(parsedTrack)}</div>` +
-          `<div class="spotify-artist">${escHtml(parsedArtist)}</div>`;
-      } else {
-        // nothing playing so keep the back content clear
-        el.innerHTML = '';
-      }
-    });
-  }
-
-  function updateNewsFace() {
-    const lc = settings.newsLowercase ? ' style="text-transform:lowercase"' : '';
-    document.querySelectorAll('.news-back-content').forEach(el => {
-      const item = currentNewsItem();
-      if (item) {
-        el.innerHTML =
-          `<div class="news-headline"${lc}>${escHtml(item.title.replace(/[@:;"',±$?⍼→+]/g, '').replace(/[–_]/g, '-'))}</div>` +
-          `<div class="news-source">Hacker News</div>`;
-      } else {
-        el.innerHTML = '<div class="weather-nodata">Loading headlines\u2026</div>';
-      }
-    });
-  }
 
   function flipTile(inner, show) {
     inner.style.transition = 'transform 0.5s cubic-bezier(0.2,0,0,1)';
@@ -433,11 +190,12 @@ const App = (() => {
     liveTileIntervals.forEach(clearTimeout);
     liveTileIntervals = [];
 
+    // Only flip a live tile to its back face when we actually have live content to show
     function scheduleWeather() {
       const delay = 4000 + Math.random() * 3000;
       liveTileIntervals.push(setTimeout(function weatherCycle() {
         const el = document.querySelector(`[data-id="${WEATHER_TILE_ID}"] .live-tile-inner`);
-        if (el) {
+        if (el && navigator.onLine && WeatherService.getData()) {
           flipTile(el, true);
           liveTileIntervals.push(setTimeout(() => flipTile(el, false), 4000 + Math.random() * 2000));
         }
@@ -448,12 +206,9 @@ const App = (() => {
     function scheduleNews() {
       const delay = 6000 + Math.random() * 3000;
       liveTileIntervals.push(setTimeout(function newsCycle() {
-        if (newsData.length > 1) {
-          newsIndex = (newsIndex + 1) % newsData.length;
-          updateNewsFace();
-        }
         const el = document.querySelector(`[data-id="${NEWS_TILE_ID}"] .live-tile-inner`);
-        if (el) {
+        if (el && navigator.onLine && NewsService.hasData()) {
+          NewsService.advanceItem();
           flipTile(el, true);
           liveTileIntervals.push(setTimeout(() => flipTile(el, false), 4000 + Math.random() * 2000));
         }
@@ -465,8 +220,7 @@ const App = (() => {
       const delay = 3000 + Math.random() * 2000;
       liveTileIntervals.push(setTimeout(function spotifyCycle() {
         const el = document.querySelector(`[data-id="${SPOTIFY_TILE_ID}"] .live-tile-inner`);
-        // only flip if we are playing music
-        if (el && spotifyData) {
+        if (el && navigator.onLine && SpotifyService.hasData()) {
           flipTile(el, true);
           liveTileIntervals.push(setTimeout(() => flipTile(el, false), 4000 + Math.random() * 2000));
         }
@@ -510,6 +264,7 @@ const App = (() => {
     weatherApiKey: '',
     weatherCountry: '',
     skipApiKeyPrompt: false,
+    skipUpdateCheck: false,
     newsEnabled: false,
     newsLowercase: false,
     spotifyEnabled: false,
@@ -562,7 +317,11 @@ const App = (() => {
     tiles.forEach(t => {
       maxRow = Math.max(maxRow, t.row + TILE_SIZES[t.size].rows);
     });
-    return maxRow * (cellSize + GRID_GAP) + 120;
+    const contentH = maxRow * (cellSize + GRID_GAP);
+    // Extra room only while editing/dragging so tiles can be moved past the last row
+    // Outside edit mode, snug the grid to its actual content so it doesn't scroll for no reason
+    const buffer = editMode ? 120 : 0;
+    return contentH + buffer;
   }
 
   function hexToRgba(hex, opacity01) {
@@ -709,7 +468,7 @@ const App = (() => {
       changed = false;
       iters++;
       for (const t of sorted) {
-        // TILE_SIZES[t.size] not needed here; canPlace reads tile.size internally
+        // canPlace reads tile size internally
         let bestRow = t.row;
         for (let r = 0; r < t.row; r++) {
           if (canPlace(t, t.col, r, t.id)) { bestRow = r; break; }
@@ -781,47 +540,20 @@ const App = (() => {
         front.append(iconF, labelF);
 
         function makeBackFace() {
+          // Empty container per tile type
           const face = document.createElement('div');
+          const c = document.createElement('div');
           if (isWeatherTile(t)) {
             face.className = 'live-tile-face weather-face';
-            const c = document.createElement('div');
             c.className = 'weather-back-content';
-            if (weatherData) {
-              let bgStyle = '';
-              if (weatherData.bgUrl) {
-                bgStyle = ` style="background-image: url('${escHtml(weatherData.bgUrl)}');"`;
-              }
-              c.innerHTML =
-                `<div class="weather-bg-blur"${bgStyle}></div>` +
-                `<div class="weather-location">${escHtml(weatherData.location)}</div>` +
-                `<div class="weather-temp">${escHtml(weatherData.temp)}</div>` +
-                `<div class="weather-condition">${escHtml(weatherData.condition)}</div>`;
-            } else if (weatherLoading) {
-              c.innerHTML = '<div class="weather-nodata">Loading weather\u2026</div>';
-            } else {
-              c.innerHTML = '<div class="weather-nodata">Set zip code in tile settings</div>';
-            }
-            face.appendChild(c);
           } else if (isNewsTile(t)) {
             face.className = 'live-tile-face news-face';
-            const c = document.createElement('div');
             c.className = 'news-back-content';
-            const item = currentNewsItem();
-            const nlc = settings.newsLowercase ? ' style="text-transform:lowercase"' : '';
-            if (item) {
-              c.innerHTML =
-                `<div class="news-headline"${nlc}>${escHtml(item.title.replace(/[:"',]/g, '').replace(/[—_]/g, '-'))}</div>` +
-                `<div class="news-source">Hacker News</div>`;
-            } else {
-              c.innerHTML = '<div class="weather-nodata">Loading headlines\u2026</div>';
-            }
-            face.appendChild(c);
           } else if (isSpotifyTile(t)) {
             face.className = 'live-tile-face spotify-face';
-            const c = document.createElement('div');
             c.className = 'spotify-content';
-            face.appendChild(c);
           }
+          face.appendChild(c);
           return face;
         }
 
@@ -884,8 +616,10 @@ const App = (() => {
 
     gridEl.classList.toggle('edit-mode', editMode);
 
-    // re-apply live tile data to freshly rebuilt DOM
-    if (spotifyData) updateSpotifyFace();
+    // Repaint all live tiles with their current service data now that the DOM has been rebuilt from scratch
+    WeatherService.updateFace();
+    NewsService.updateFace();
+    SpotifyService.updateFace();
   }
 
   // TILE CRAP
@@ -1236,7 +970,7 @@ const App = (() => {
             });
           }
           else if (isNewsTile(touchTile)) {
-            const item = currentNewsItem();
+            const item = NewsService.currentItem();
             if (item?.url) { playLaunchAnimation(touchTile, (t) => window.open(item.url, '_blank')); }
             else { showToast('No headlines loaded'); }
           }
@@ -1290,7 +1024,7 @@ const App = (() => {
             });
           }
           else if (isNewsTile(touchTile)) {
-            const item = currentNewsItem();
+            const item = NewsService.currentItem();
             if (item?.url) { playLaunchAnimation(touchTile, (t) => window.open(item.url, '_blank')); }
             else { showToast('No headlines loaded'); }
           }
@@ -1425,6 +1159,76 @@ const App = (() => {
       overlay.querySelector('.confirm-cancel').onclick = () => { overlay.remove(); onSecondary(); };
     }
     overlay.onclick = (e) => { if (e.target === overlay) { overlay.remove(); onConfirm(); } };
+  }
+
+  // UPDATE TIME
+  function showUpdatePopup(localVer, remoteVer) {
+    const overlay = document.createElement('div');
+    overlay.className = 'confirm-overlay';
+    overlay.innerHTML =
+      `<div class="confirm-box">` +
+      `<h3>Update Available</h3>` +
+      `<p>An update for this launcher is available. It is recommended for you to update...<br><br>Installed is ${escHtml(localVer)}<br>Latest is ${escHtml(remoteVer)}</p>` +
+      `<div class="confirm-actions" style="gap:8px;">` +
+      `<button class="update-skip">Skip for now</button>` +
+      `<button class="update-now" style="color:#fff; background:#0078d4; border-color:#0078d4;">Update now</button>` +
+      `</div>` +
+      `<div class="confirm-actions" style="gap:8px; margin-top:8px;">` +
+      `<button class="update-never">Never ask again</button>` +
+      `</div>` +
+      `</div>`;
+    document.body.appendChild(overlay);
+
+    overlay.querySelector('.update-skip').onclick = () => overlay.remove();
+
+    overlay.querySelector('.update-never').onclick = () => {
+      overlay.remove();
+      settings.skipUpdateCheck = true;
+      saveSettings();
+      metroAlert(
+        'Sounds good',
+        'Go to the cache management section in settings to update, if you change your mind...'
+      );
+    };
+
+    overlay.querySelector('.update-now').onclick = async () => {
+      overlay.remove();
+      try {
+        const names = await caches.keys();
+        await Promise.all(names.map(n => caches.delete(n)));
+        const regs = await navigator.serviceWorker.getRegistrations();
+        await Promise.all(regs.map(r => r.unregister()));
+      } catch {
+        // cache / service worker API may not be available
+      }
+      location.reload();
+    };
+
+    // Tap outside dismisses or skips the update check
+    overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
+  }
+
+  async function checkForUpdate() {
+    if (!navigator.onLine) return;
+    if (settings.skipUpdateCheck) return;
+    // Fixes the update checker from showing up on every reload
+    if (!navigator.serviceWorker || !navigator.serviceWorker.controller) return;
+    try {
+      // The plain fetch goes through the service worker cache-first handler
+      const [localRes, remoteRes] = await Promise.all([
+        fetch('./version.txt'),
+        fetch(`./version.txt?t=${Date.now()}`, { cache: 'no-store' }),
+      ]);
+      if (!localRes.ok || !remoteRes.ok) return;
+      const local = (await localRes.text()).trim();
+      const remote = (await remoteRes.text()).trim();
+      // Any mismatch triggers the popup - so if a downgrade is required, it will be shown
+      if (local && remote && local !== remote) {
+        showUpdatePopup(local, remote);
+      }
+    } catch {
+      // Offline or fetch failed — silently skip
+    }
   }
 
   function findHueForColor(hex) {
@@ -1827,10 +1631,10 @@ const App = (() => {
         color: document.getElementById('weather-color').value,
         url: document.getElementById('weather-url').value.trim()
       });
-      startWeatherPolling();
+      WeatherService.start();
       if (unitsChanged) {
-        localStorage.removeItem(WEATHER_CACHE_KEY);
-        fetchWeather(settings.weatherZip);
+        WeatherService.purgeCache();
+        WeatherService.fetchData();
       }
       hideModal();
       showToast('Weather updated');
@@ -1887,7 +1691,10 @@ const App = (() => {
       </div>
       <div class="form-group">
         <label>Username (On Leopard Server)</label>
-        <input type="text" id="spotify-username" value="${escHtml(tile.spotifyUsername || settings.spotifyUsername || '')}" placeholder="Your registered username" autocomplete="off" autocapitalize="none">
+        <div class="input-btn-row" style="display:flex;gap:8px;align-items:stretch;width:100%;">
+          <input type="text" id="spotify-username" value="${escHtml(tile.spotifyUsername || settings.spotifyUsername || '')}" placeholder="Your registered username" autocomplete="off" autocapitalize="none" style="flex:1 1 auto;min-width:0;width:auto;">
+          <button type="button" class="inline-btn" id="spotify-test" style="-webkit-appearance:none;appearance:none;padding:10px 14px;border:1px solid rgba(255,255,255,0.85);border-radius:0;background:transparent;color:#fff;font-size:13px;font-family:'Segoe UI Supro';cursor:pointer;white-space:nowrap;flex-shrink:0;box-shadow:none;line-height:1;">Test</button>
+        </div>
       </div>
       <div class="form-group">
         <label>Query Rate (seconds, min 2)</label>
@@ -1922,6 +1729,17 @@ const App = (() => {
       coverArtToggle.classList.toggle('on', coverArt);
     };
 
+    const testBtn = document.getElementById('spotify-test');
+    testBtn.onclick = async () => {
+      const originalLabel = testBtn.textContent;
+      testBtn.disabled = true;
+      testBtn.textContent = 'Testing...';
+      const { ok } = await SpotifyService.testConnection();
+      showToast(ok ? 'Leopard server appears to be online' : 'Leopard server appears to be offline');
+      testBtn.disabled = false;
+      testBtn.textContent = originalLabel;
+    };
+
     document.getElementById('spotify-cancel').onclick = hideModal;
     document.getElementById('spotify-save').onclick = () => {
       settings.spotifyUsername = document.getElementById('spotify-username').value.trim();
@@ -1939,8 +1757,8 @@ const App = (() => {
         spotifyCoverArt: coverArt,
         url: settings.spotifyUrl
       });
-      // Force a re-fetch and restart polling since the preference changed
-      startSpotifyPolling();
+      // Force a redone fetch and restart polling since the preference changed
+      SpotifyService.start();
       hideModal();
       showToast('Spotify tile updated');
     };
@@ -2078,9 +1896,12 @@ const App = (() => {
 
       <div class="form-section-title${sectionClass('cache')}" data-section="cache">Manage Cache <span class="section-chevron">\u25BC</span></div>
       <div class="section-body${sectionClass('cache')}" id="sec-cache">
-        <div class="modal-actions" style="margin-bottom:0;">
+        <div class="modal-actions" style="margin-bottom:8px;">
           <button class="btn-secondary" id="settings-sw-check">Service Worker Check</button>
           <button class="btn-secondary" id="settings-purge-cache" style="color:#ff9800; border-color:#ff9800;">Update App</button>
+        </div>
+        <div class="modal-actions" style="margin-bottom:0;">
+          <button class="btn-secondary" id="settings-uninstall" style="color:#0078d4; border-color:#0078d4;">!! Uninstall !!</button>
         </div>
       </div>
 
@@ -2264,9 +2085,9 @@ const App = (() => {
               render();
 
               startLiveTileFlip();
-              if (settings.weatherZip) startWeatherPolling();
-              if (settings.newsEnabled) startNewsPolling();
-              if (settings.spotifyEnabled) startSpotifyPolling();
+              if (settings.weatherZip) WeatherService.start();
+              if (settings.newsEnabled) NewsService.start();
+              if (settings.spotifyEnabled) SpotifyService.start();
 
               hideModal();
               showToast('Data restored successfully');
@@ -2313,7 +2134,9 @@ const App = (() => {
       showModal('<h2>Service Worker Checker</h2><div class="weather-nodata" style="padding:24px 0;">Checking cache\u2026</div>');
 
       const REQUIRED_ASSETS = [
-        './', './index.html', './style.css', './app.js', './manifest.json', './version.txt',
+        './', './index.html', './style.css', './app.js',
+        './services/weather.js', './services/news.js', './services/spotify.js',
+        './manifest.json', './version.txt',
         './segoe-ui-supro.otf',
         './weather_bg/01d.jpg', './weather_bg/01n.jpg',
         './weather_bg/02d.jpg', './weather_bg/02n.jpg',
@@ -2382,6 +2205,32 @@ const App = (() => {
       window.open('https://paypal.me/sawyerthemiller', '_blank');
     };
 
+    document.getElementById('settings-uninstall').onclick = () => {
+      metroConfirm(
+        'Uninstall Launcher',
+        'This will wipe all cached assets, service worker registration, and locally-saved launcher data (tiles, settings), then close the page. After this is done, you can uninstall the app from your home screen. This is the most destructive action in the app and cannot be undone...',
+        'Uninstall',
+        async () => {
+          try {
+            const names = await caches.keys();
+            await Promise.all(names.map(n => caches.delete(n)));
+            const regs = await navigator.serviceWorker.getRegistrations();
+            await Promise.all(regs.map(r => r.unregister()));
+          } catch {
+            // cache / service worker API may not be available
+          }
+          try { localStorage.clear(); } catch { }
+          try { sessionStorage.clear(); } catch { }
+          window.close();
+          // Fallback for contexts where window.close is a no-op
+          setTimeout(() => {
+            document.documentElement.innerHTML = '';
+          }, 100);
+        },
+        '#0078d4'
+      );
+    };
+
     document.getElementById('settings-apply').onclick = () => {
       const oldSettingsJSON = JSON.stringify(settings);
 
@@ -2412,18 +2261,18 @@ const App = (() => {
 
       if (newsOn && !wasNewsOn) {
         ensureNewsTile();
-        if (!newsData.length) startNewsPolling();
+        if (!NewsService.hasData()) NewsService.start();
       } else if (!newsOn && wasNewsOn) {
         removeNewsTile();
-        if (newsPollingInterval) clearInterval(newsPollingInterval);
+        NewsService.stop();
       }
 
       if (spotifyOn && !wasSpotifyOn) {
         ensureSpotifyTile();
-        startSpotifyPolling();
+        SpotifyService.start();
       } else if (!spotifyOn && wasSpotifyOn) {
         removeSpotifyTile();
-        if (spotifyPollingInterval) clearInterval(spotifyPollingInterval);
+        SpotifyService.stop();
       }
 
       if (gridlockOn) compactGrid();
@@ -2622,15 +2471,15 @@ const App = (() => {
         return;
       }
 
-      localStorage.removeItem(WEATHER_CACHE_KEY);
-      localStorage.removeItem(NEWS_CACHE_KEY);
+      WeatherService.purgeCache();
+      NewsService.purgeCache();
 
       const promises = [];
       if (settings.weatherZip) {
-        promises.push(fetchWeather(settings.weatherZip));
+        promises.push(WeatherService.fetchData());
       }
       if (settings.newsEnabled) {
-        promises.push(fetchNews());
+        promises.push(NewsService.fetchData());
       }
 
       if (promises.length > 0) {
@@ -2661,6 +2510,21 @@ const App = (() => {
     if (savedSettings) {
       settings = { ...settings, ...savedSettings };
     }
+
+    // Wire the network services now that settings and tiles are loaded
+    const serviceDeps = {
+      getSettings: () => settings,
+      getTile: (id) => tiles.find(t => t.id === id),
+      escHtml,
+      // Called by a service when its live data disappears mid-view
+      snapToFront: (id) => {
+        const inner = document.querySelector(`[data-id="${id}"] .live-tile-inner`);
+        if (inner) flipTile(inner, false);
+      },
+    };
+    WeatherService.init(serviceDeps);
+    NewsService.init(serviceDeps);
+    SpotifyService.init(serviceDeps);
 
     // ensure news tile if enabled
     if (settings.newsEnabled) ensureNewsTile();
@@ -2713,13 +2577,30 @@ const App = (() => {
         saveSettings();
         hideModal();
         showToast('Settings saved');
-        if (settings.weatherZip) startWeatherPolling();
+        if (settings.weatherZip) WeatherService.start();
       };
     } else {
-      if (settings.weatherZip) startWeatherPolling();
+      if (settings.weatherZip) WeatherService.start();
+      // Run the update check only when we're not simultaneously other modals
+      checkForUpdate();
     }
-    if (settings.newsEnabled) startNewsPolling();
-    if (settings.spotifyEnabled) startSpotifyPolling();
+    if (settings.newsEnabled) NewsService.start();
+    if (settings.spotifyEnabled) SpotifyService.start();
+
+    // Live network status handling
+    window.addEventListener('online', () => {
+      if (settings.weatherZip) WeatherService.fetchData();
+      if (settings.newsEnabled) NewsService.fetchData();
+      if (settings.spotifyEnabled) SpotifyService.fetchData();
+    });
+
+    window.addEventListener('offline', () => {
+      WeatherService.updateFace();
+      NewsService.updateFace();
+      SpotifyService.updateFace();
+      // Snap any live tile that happens to be mid-flip back to its frontface
+      document.querySelectorAll('.live-tile .live-tile-inner').forEach(inner => flipTile(inner, false));
+    });
 
     window.addEventListener('resize', () => { computeCellSize(); render(); });
   }

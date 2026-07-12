@@ -12,34 +12,62 @@ Usage:
 
 import json
 import os
+import random
 import select
 import subprocess
 import sys
 import termios
 import time
 import tty
-import urllib.request
+import urllib.error
 import urllib.parse
+import urllib.request
 import ssl
 
 CONFIG_FILE = os.path.expanduser('~/.spotify_leopard_user')
 
 # ── helpers ──
 
-def make_request(url, data=None, method='GET'):
-    """Make an HTTP request and return parsed JSON (or none on failure)"""
+# The server serialises writes with a file lock and can respond 503
+_RETRY_STATUSES = {429, 500, 502, 503, 504}
+
+
+def make_request(url, data=None, method='GET', *, retries=3):
+    """Make an HTTP request and return parsed JSON (or None on failure).
+
+    Retries transient network errors and 5xx / 429 responses with jittered
+    backoff. Returns None only after all retries are exhausted, or on a
+    non-retryable 4xx response.
+    """
     headers = {
         'Content-Type': 'application/json',
-        'User-Agent': 'MetroLaunchClient/2.0',
+        'User-Agent': 'MetroLaunchClient/2.1',
+        'Connection': 'close',
     }
     body = json.dumps(data).encode('utf-8') if data else None
-    req = urllib.request.Request(url, data=body, headers=headers, method=method)
     ctx = ssl._create_unverified_context()
-    try:
-        with urllib.request.urlopen(req, timeout=10, context=ctx) as resp:
-            return json.loads(resp.read().decode('utf-8'))
-    except Exception as e:
-        return None
+
+    for attempt in range(retries + 1):
+        req = urllib.request.Request(url, data=body, headers=headers, method=method)
+        try:
+            with urllib.request.urlopen(req, timeout=10, context=ctx) as resp:
+                raw = resp.read().decode('utf-8')
+                try:
+                    return json.loads(raw)
+                except ValueError:
+                    return None
+        except urllib.error.HTTPError as e:
+            # Retry on server-side backpressure, give up on real client errors
+            if e.code in _RETRY_STATUSES and attempt < retries:
+                pass
+            else:
+                return None
+        except (urllib.error.URLError, TimeoutError, ConnectionError, OSError):
+            if attempt >= retries:
+                return None
+        # Step off, George...
+        time.sleep((0.4 * (2 ** attempt)) + random.uniform(0, 0.25))
+    return None
 
 
 def save_username(username):
@@ -207,7 +235,7 @@ def main():
                             'isPlaying': True,
                         }, 'POST')
                     elif resumed:
-                        print(f'[Spotify] Detected song resumed "{track}"')
+                        print(f'[Spotify] Detected song resumed')
                         make_request(f'{server_url}?action=update', {
                             'username': username,
                             'track': track,
@@ -219,7 +247,10 @@ def main():
                     prev_artist = artist
                     prev_playing = True
 
-                time.sleep(poll_rate)
+                # Jitter the sleep by about 15% so many clients that started at
+                # the same second don't stay in lockstep hammering the server
+                jitter = poll_rate * random.uniform(-0.15, 0.15)
+                time.sleep(max(0.1, poll_rate + jitter))
 
             except KeyboardInterrupt:
                 break

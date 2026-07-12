@@ -54,7 +54,7 @@ body {
   overscroll-behavior-y: none !important;
 }
 
-/* ========== BACKGROUND LAYER (inside each launcher) ========== */
+/* ========== BACKGROUND LAYER ========== */
 
 .bg-layer {
   position: absolute;
@@ -922,6 +922,52 @@ body.is-desktop .modal-sheet {
   cursor: pointer;
 }
 
+.input-btn-row {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+  width: 100%;
+}
+
+.input-btn-row > input {
+  flex: 1 1 auto;
+  min-width: 0;
+  width: auto;
+}
+
+.input-btn-row > .inline-btn {
+  -webkit-appearance: none;
+  appearance: none;
+  padding: 10px 14px;
+  border: 1px solid var(--border-strong);
+  border-radius: 0;
+  background: transparent;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 400;
+  font-family: 'Segoe UI Supro';
+  cursor: pointer;
+  transition: background 0.12s;
+  white-space: nowrap;
+  flex-shrink: 0;
+  box-shadow: none;
+  text-transform: none;
+  line-height: 1;
+}
+
+.input-btn-row > .inline-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.input-btn-row > .inline-btn:active {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.input-btn-row > .inline-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
 .color-picker-row {
   display: flex;
   flex-direction: column;
@@ -1186,7 +1232,7 @@ body.is-desktop .modal-sheet {
   margin-bottom: 0;
 }
 
-/* ========== TOGGLE SWITCH (Metro square) ========== */
+/* ========== TOGGLE SWITCH ========== */
 
 .toggle-row {
   display: flex;

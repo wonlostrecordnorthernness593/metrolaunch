@@ -1,9 +1,12 @@
-const CACHE_NAME = 'metro-launcher-v8';
+const CACHE_NAME = 'metro-launcher-v17';
 const ASSETS_TO_CACHE = [
     './',
     './index.html',
     './style.css',
     './app.js',
+    './services/weather.js',
+    './services/news.js',
+    './services/spotify.js',
     './manifest.json',
     './version.txt',
     './segoe-ui-supro.otf',
