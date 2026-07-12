@@ -19,6 +19,7 @@
   let data = null;
   let loading = false;
   let pollTimer = null;
+  let lastFetchTs = 0;
 
   function cacheGet() {
     try {
@@ -54,6 +55,7 @@
       data = cached;
       loading = false;
       updateFace();
+      lastFetchTs = Date.now();
       return Promise.resolve();
     }
 
@@ -87,6 +89,7 @@
           bgUrl: `./weather_bg/${mappedIcon}.jpg`,
         };
         loading = false;
+        lastFetchTs = Date.now();
         cacheSet(data);
         updateFace();
       })
@@ -122,19 +125,27 @@
     });
   }
 
+  function schedulePoll() {
+    pollTimer = setTimeout(() => {
+      localStorage.removeItem(CACHE_KEY);
+      fetchData().finally(() => {
+        // Self reschedule
+        if (pollTimer !== null) schedulePoll();
+      });
+    }, TTL_MS);
+  }
+
   function start() {
     stop();
     const settings = deps.getSettings();
     if (!settings.weatherZip) return;
+    localStorage.removeItem(CACHE_KEY);
     fetchData();
-    pollTimer = setInterval(() => {
-      localStorage.removeItem(CACHE_KEY);
-      fetchData();
-    }, TTL_MS);
+    schedulePoll();
   }
 
   function stop() {
-    if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+    if (pollTimer !== null) { clearTimeout(pollTimer); pollTimer = null; }
   }
 
   function purgeCache() {
@@ -144,6 +155,16 @@
   function isRunning() {
     return pollTimer !== null;
   }
+
+  // When the page comes back from being hidden do another fetch if the data is stale
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState !== 'visible') return;
+    if (pollTimer === null) return;           // polling not active
+    if (!navigator.onLine) return;            // can't reach the API
+    if (Date.now() - lastFetchTs < TTL_MS) return; // data is still fresh
+    localStorage.removeItem(CACHE_KEY);
+    fetchData();
+  });
 
   window.WeatherService = {
     TILE_ID,
