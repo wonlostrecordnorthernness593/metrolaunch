@@ -2,27 +2,42 @@
 """
 Spotify Client for MetroLaunch (Leopard Server)
 ========================================
-Runs on the Mac alongside Spotify
-Detects song changes and pauses via AppleScript, then pushes
-the status to a remote PHP server
+Runs alongside Spotify on macOS or Windows
+
+Detects song changes and pauses, then pushes the status
+to a remote PHP server
+
+macOS:   Uses AppleScript to query Spotify's player state.
+Windows: Queries the System Media Transport Controls API via PowerShell - so no extra dependencies
 
 Usage:
     python3 spotify_client.py
 """
 
+
 import json
 import os
+import platform
 import random
-import select
 import subprocess
 import sys
-import termios
 import time
-import tty
 import urllib.error
 import urllib.parse
 import urllib.request
 import ssl
+
+# ── platform detection ──
+IS_WINDOWS = platform.system() == 'Windows'
+IS_MACOS = platform.system() == 'Darwin'
+
+# platform-specific imports for non-blocking key input
+if IS_WINDOWS:
+    import msvcrt
+else:
+    import select
+    import termios
+    import tty
 
 CONFIG_FILE = os.path.expanduser('~/.spotify_leopard_user')
 
@@ -33,11 +48,9 @@ _RETRY_STATUSES = {429, 500, 502, 503, 504}
 
 
 def make_request(url, data=None, method='GET', *, retries=3):
-    """Make an HTTP request and return parsed JSON (or None on failure).
+    """Make an HTTP request and return parsed JSON (or none on failure)
 
-    Retries transient network errors and 5xx / 429 responses with jittered
-    backoff. Returns None only after all retries are exhausted, or on a
-    non-retryable 4xx response.
+    Retries transient network errors
     """
     headers = {
         'Content-Type': 'application/json',
@@ -84,8 +97,10 @@ def load_username():
     return None
 
 
-def get_spotify_status():
-    """Use AppleScript to query Spotify's current state"""
+# ── Spotify status detection (platform specific) ──
+
+def _get_spotify_status_macos():
+    """Use AppleScript to query Spotify's current state (macOS)."""
     script = '''
     tell application "System Events"
         set processList to (name of every process)
@@ -112,6 +127,120 @@ def get_spotify_status():
         return 'NOT_RUNNING'
 
 
+# PowerShell script that queries the Windows Now Playing API
+_WINDOWS_MEDIA_SCRIPT = r'''
+Add-Type -AssemblyName System.Runtime.WindowsRuntime
+
+$asTaskGeneric = ([System.WindowsRuntimeSystemExtensions].GetMethods() |
+    Where-Object {
+        $_.Name -eq 'AsTask' -and
+        $_.GetParameters().Count -eq 1 -and
+        $_.GetParameters()[0].ParameterType.Name -eq 'IAsyncOperation`1'
+    })[0]
+
+function Await($WinRtTask, $ResultType) {
+    $asTask = $asTaskGeneric.MakeGenericMethod($ResultType)
+    $netTask = $asTask.Invoke($null, @($WinRtTask))
+    $netTask.Wait(-1) | Out-Null
+    $netTask.Result
+}
+
+try {
+    [void][Windows.Media.Control.GlobalSystemMediaTransportControlsSessionManager,Windows.Media.Control,ContentType=WindowsRuntime]
+} catch { Write-Output 'NOT_RUNNING'; exit 0 }
+
+try {
+    $mgr = Await ([Windows.Media.Control.GlobalSystemMediaTransportControlsSessionManager]::RequestAsync()) `
+                 ([Windows.Media.Control.GlobalSystemMediaTransportControlsSessionManager])
+} catch { Write-Output 'NOT_RUNNING'; exit 0 }
+
+$session = $mgr.GetCurrentSession()
+if ($null -eq $session) { Write-Output 'NOT_RUNNING'; exit 0 }
+
+# Only report status when Spotify is the active media source
+if ($session.SourceAppUserModelId -notlike '*spotify*') {
+    Write-Output 'NOT_RUNNING'; exit 0
+}
+
+$info = Await ($session.TryGetMediaPropertiesAsync()) `
+              ([Windows.Media.Control.GlobalSystemMediaTransportControlsSessionMediaProperties])
+$pb   = $session.GetPlaybackInfo()
+
+if ($pb.PlaybackStatus -eq 'Playing') {
+    Write-Output ("PLAYING|" + $info.Title + "|" + $info.Artist)
+} else {
+    Write-Output 'PAUSED'
+}
+'''
+
+
+def _get_spotify_status_windows():
+    """Query for Spotify state"""
+    try:
+        result = subprocess.check_output(
+            ['powershell', '-NoProfile', '-NonInteractive',
+             '-ExecutionPolicy', 'Bypass', '-Command', _WINDOWS_MEDIA_SCRIPT],
+            timeout=8,
+            stderr=subprocess.DEVNULL,
+        )
+        return result.decode('utf-8').strip()
+    except Exception:
+        return 'NOT_RUNNING'
+
+
+def get_spotify_status():
+    """Query Spotify's current state using the appropriate platform method"""
+    if IS_WINDOWS:
+        return _get_spotify_status_windows()
+    else:
+        return _get_spotify_status_macos()
+
+
+# ── Non-blocking key input (platform specific) ──
+
+class _KeyReaderUnix:
+    """Non-blocking single-key reader using termios/tty (POSIX)"""
+
+    def __enter__(self):
+        self._old_settings = termios.tcgetattr(sys.stdin)
+        tty.setcbreak(sys.stdin.fileno())
+        return self
+
+    def __exit__(self, *_):
+        termios.tcsetattr(sys.stdin, termios.TCSADRAIN, self._old_settings)
+
+    @staticmethod
+    def key_pressed():
+        """Return the pressed key character, or None if nothing is waiting."""
+        if select.select([sys.stdin], [], [], 0)[0]:
+            return sys.stdin.read(1)
+        return None
+
+
+class _KeyReaderWindows:
+    """Non-blocking single-key reader for NT"""
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *_):
+        pass
+
+    @staticmethod
+    def key_pressed():
+        """Return the pressed key character, or None if nothing is waiting"""
+        if msvcrt.kbhit():
+            ch = msvcrt.getwch()
+            return ch
+        return None
+
+
+def _make_key_reader():
+    if IS_WINDOWS:
+        return _KeyReaderWindows()
+    return _KeyReaderUnix()
+
+
 # ── Main ──
 
 SERVER_URL = 'https://leopardindustries.net:8088/spotify.php'
@@ -120,6 +249,10 @@ POLL_RATE = 2
 def main():
     server_url = SERVER_URL
     poll_rate = POLL_RATE
+
+    if not IS_MACOS and not IS_WINDOWS:
+        print('[FAIL] Unsupported platform. This client supports macOS and Windows.')
+        sys.exit(1)
 
     # ── connect to server ──
     print('')
@@ -180,93 +313,103 @@ def main():
     prev_artist = None
     prev_playing = None
 
-    # put terminal into raw mode for non-blocking key detection
-    old_settings = termios.tcgetattr(sys.stdin)
-    tty.setcbreak(sys.stdin.fileno())
+    with _make_key_reader() as keys:
 
-    try:
-        while True:
-            # check for 'q' keypress (non-blocking)
-            if select.select([sys.stdin], [], [], 0)[0]:
-                ch = sys.stdin.read(1)
-                if ch.lower() == 'q':
+        def _check_quit():
+            """Return True if the user pressed 'q'."""
+            ch = keys.key_pressed()
+            return ch is not None and ch.lower() == 'q'
+
+        def _interruptible_sleep(duration):
+            """Sleep for *duration* seconds, checking for 'q' every 100 ms."""
+            remaining = max(0.0, duration)
+            while remaining > 0:
+                chunk = min(0.1, remaining)
+                time.sleep(chunk)
+                remaining -= chunk
+                if _check_quit():
+                    return True          # quit requested
+            return False
+
+        try:
+            while True:
+                if _check_quit():
                     break
 
-            try:
-                status = get_spotify_status()
+                try:
+                    status = get_spotify_status()
 
-                if status == 'NOT_RUNNING':
-                    # if it was playing before, send a pause
-                    if prev_playing is True:
-                        make_request(f'{server_url}?action=update', {
-                            'username': username,
-                            'track': '',
-                            'artist': '',
-                            'isPlaying': False,
-                        }, 'POST')
-                        print('[Spotify] Detected Spotify closed')
-                        prev_playing = False
+                    if status == 'NOT_RUNNING':
+                        # if it was playing before, send a pause
+                        if prev_playing is True:
+                            make_request(f'{server_url}?action=update', {
+                                'username': username,
+                                'track': '',
+                                'artist': '',
+                                'isPlaying': False,
+                            }, 'POST')
+                            print('[Spotify] Detected Spotify closed')
+                            prev_playing = False
 
-                elif status == 'PAUSED':
-                    if prev_playing is not False:
-                        make_request(f'{server_url}?action=update', {
-                            'username': username,
-                            'track': prev_track or '',
-                            'artist': prev_artist or '',
-                            'isPlaying': False,
-                        }, 'POST')
-                        print('[Spotify] Detected song paused')
-                        prev_playing = False
+                    elif status == 'PAUSED':
+                        if prev_playing is not False:
+                            make_request(f'{server_url}?action=update', {
+                                'username': username,
+                                'track': prev_track or '',
+                                'artist': prev_artist or '',
+                                'isPlaying': False,
+                            }, 'POST')
+                            print('[Spotify] Detected song paused')
+                            prev_playing = False
 
-                elif status.startswith('PLAYING|'):
-                    parts = status.split('|')
-                    track = parts[1] if len(parts) > 1 else ''
-                    artist = parts[2] if len(parts) > 2 else ''
+                    elif status.startswith('PLAYING|'):
+                        parts = status.split('|')
+                        track = parts[1] if len(parts) > 1 else ''
+                        artist = parts[2] if len(parts) > 2 else ''
 
-                    song_changed = (track != prev_track or artist != prev_artist)
-                    resumed = (prev_playing is False and not song_changed)
+                        song_changed = (track != prev_track or artist != prev_artist)
+                        resumed = (prev_playing is False and not song_changed)
 
-                    if song_changed:
-                        print(f'[Spotify] Detected song changed')
-                        make_request(f'{server_url}?action=update', {
-                            'username': username,
-                            'track': track,
-                            'artist': artist,
-                            'isPlaying': True,
-                        }, 'POST')
-                    elif resumed:
-                        print(f'[Spotify] Detected song resumed')
-                        make_request(f'{server_url}?action=update', {
-                            'username': username,
-                            'track': track,
-                            'artist': artist,
-                            'isPlaying': True,
-                        }, 'POST')
+                        if song_changed:
+                            print(f'[Spotify] Detected song changed')
+                            make_request(f'{server_url}?action=update', {
+                                'username': username,
+                                'track': track,
+                                'artist': artist,
+                                'isPlaying': True,
+                            }, 'POST')
+                        elif resumed:
+                            print(f'[Spotify] Detected song resumed')
+                            make_request(f'{server_url}?action=update', {
+                                'username': username,
+                                'track': track,
+                                'artist': artist,
+                                'isPlaying': True,
+                            }, 'POST')
 
-                    prev_track = track
-                    prev_artist = artist
-                    prev_playing = True
+                        prev_track = track
+                        prev_artist = artist
+                        prev_playing = True
 
-                # Jitter the sleep by about 15% so many clients that started at
-                # the same second don't stay in lockstep hammering the server
-                jitter = poll_rate * random.uniform(-0.15, 0.15)
-                time.sleep(max(0.1, poll_rate + jitter))
+                    # Jitter the sleep by about 15% so many clients that started at
+                    # the same second don't stay in lockstep hammering the server.
+                    jitter = poll_rate * random.uniform(-0.15, 0.15)
+                    if _interruptible_sleep(max(0.1, poll_rate + jitter)):
+                        break
 
-            except KeyboardInterrupt:
-                break
+                except KeyboardInterrupt:
+                    break
 
-    finally:
-        # restore terminal settings
-        termios.tcsetattr(sys.stdin, termios.TCSADRAIN, old_settings)
-        print('')
-        print('[OK] Client stopped')
-        # send a final pause so the tile clears
-        make_request(f'{server_url}?action=update', {
-            'username': username,
-            'track': '',
-            'artist': '',
-            'isPlaying': False,
-        }, 'POST')
+        finally:
+            print('')
+            print('[OK] Client stopped')
+            # send a final pause so the tile clears
+            make_request(f'{server_url}?action=update', {
+                'username': username,
+                'track': '',
+                'artist': '',
+                'isPlaying': False,
+            }, 'POST')
 
 
 if __name__ == '__main__':
