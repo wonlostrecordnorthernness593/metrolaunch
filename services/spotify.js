@@ -26,7 +26,8 @@
 
   function cleanTrackName(track) {
     if (!track) return '';
-    let parsed = track.replace(/[',.;:/+!?]/g, '');
+    let parsed = track.replace(/[',.;:+!?]/g, '');
+    parsed = parsed.replace(/\//g, ' ');
     parsed = parsed.replace(/\bfeat\b/gi, 'Featuring');
     parsed = parsed.replace(/\bwith\b/gi, 'With');
     parsed = parsed.replace(/\bpt\b/gi, 'PT');
@@ -100,34 +101,44 @@
       });
   }
 
+  function _renderSpotifyTile(el, parsedTrack, parsedArtist, bgStyle) {
+    const escHtml = deps.escHtml;
+    el.innerHTML =
+      `<div class="spotify-bg-blur"${bgStyle}></div>` +
+      `<div class="spotify-track">${escHtml(parsedTrack)}</div>` +
+      `<div class="spotify-artist">${escHtml(parsedArtist)}</div>`;
+  }
+
   function updateFace() {
     const escHtml = deps.escHtml;
     const tile = deps.getTile(TILE_ID);
     const showCover = !!tile?.spotifyCoverArt;
     const offline = !navigator.onLine;
 
-    document.querySelectorAll('.spotify-content').forEach(el => {
-      if (offline || !data) {
-        // blank while offline or when nothing is playing - once we're back
-        // online the poll interval / online listener will refetch and
-        // repaint the tile automatically
-        el.innerHTML = '';
-        return;
+    const elements = document.querySelectorAll('.spotify-content');
+
+    if (offline || !data) {
+      elements.forEach(el => { el.innerHTML = ''; });
+      return;
+    }
+
+    const parsedArtist = cleanArtistName(data.artist);
+    const parsedTrack = cleanTrackName(data.track);
+
+    if (showCover && data.coverUrl) {
+      // preload the image so the tile doesn't flash without a background
+      const img = new Image();
+      img.src = data.coverUrl;
+      const bgStyle = ` style="background-image: url('${escHtml(data.coverUrl)}');"`;      const apply = () => elements.forEach(el => _renderSpotifyTile(el, parsedTrack, parsedArtist, bgStyle));
+      if (img.complete) {
+        apply();
+      } else {
+        img.onload = apply;
+        img.onerror = apply;  // still render the tile, just without the image
       }
-
-      let bgStyle = '';
-      if (showCover && data.coverUrl) {
-        bgStyle = ` style="background-image: url('${escHtml(data.coverUrl)}');"`;
-      }
-
-      const parsedArtist = cleanArtistName(data.artist);
-      const parsedTrack = cleanTrackName(data.track);
-
-      el.innerHTML =
-        `<div class="spotify-bg-blur"${bgStyle}></div>` +
-        `<div class="spotify-track">${escHtml(parsedTrack)}</div>` +
-        `<div class="spotify-artist">${escHtml(parsedArtist)}</div>`;
-    });
+    } else {
+      elements.forEach(el => _renderSpotifyTile(el, parsedTrack, parsedArtist, ''));
+    }
   }
 
   function start() {

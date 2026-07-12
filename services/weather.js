@@ -100,29 +100,42 @@
       });
   }
 
+  function _renderWeatherTile(el, bgStyle) {
+    const escHtml = deps.escHtml;
+    el.innerHTML =
+      `<div class="weather-bg-blur"${bgStyle}></div>` +
+      `<div class="weather-location">${escHtml(data.location)}</div>` +
+      `<div class="weather-temp">${escHtml(data.temp)}</div>` +
+      `<div class="weather-condition">${escHtml(data.condition)}</div>`;
+  }
+
   function updateFace() {
     const escHtml = deps.escHtml;
     const offline = !navigator.onLine;
-    document.querySelectorAll('.weather-back-content').forEach(el => {
-      if (offline) {
-        // while offline the live tile shows nothing rather than a stale reading
-        el.innerHTML = '';
-      } else if (data) {
-        let bgStyle = '';
-        if (data.bgUrl) {
-          bgStyle = ` style="background-image: url('${escHtml(data.bgUrl)}');"`;
+    const elements = document.querySelectorAll('.weather-back-content');
+
+    if (offline) {
+      elements.forEach(el => { el.innerHTML = ''; });
+    } else if (data) {
+      if (data.bgUrl) {
+        // preload the image so the tile doesn't flash without a background
+        const img = new Image();
+        img.src = data.bgUrl;
+        const bgStyle = ` style="background-image: url('${escHtml(data.bgUrl)}');"`;        const apply = () => elements.forEach(el => _renderWeatherTile(el, bgStyle));
+        if (img.complete) {
+          apply();
+        } else {
+          img.onload = apply;
+          img.onerror = apply;
         }
-        el.innerHTML =
-          `<div class="weather-bg-blur"${bgStyle}></div>` +
-          `<div class="weather-location">${escHtml(data.location)}</div>` +
-          `<div class="weather-temp">${escHtml(data.temp)}</div>` +
-          `<div class="weather-condition">${escHtml(data.condition)}</div>`;
-      } else if (loading) {
-        el.innerHTML = '<div class="weather-nodata">Loading weather\u2026</div>';
       } else {
-        el.innerHTML = '<div class="weather-nodata">Set zip code in tile settings</div>';
+        elements.forEach(el => _renderWeatherTile(el, ''));
       }
-    });
+    } else if (loading) {
+      elements.forEach(el => { el.innerHTML = '<div class="weather-nodata">Loading weather\u2026</div>'; });
+    } else {
+      elements.forEach(el => { el.innerHTML = '<div class="weather-nodata">Set zip code in tile settings</div>'; });
+    }
   }
 
   function schedulePoll() {
