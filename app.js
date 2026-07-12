@@ -1161,6 +1161,34 @@ const App = (() => {
     overlay.onclick = (e) => { if (e.target === overlay) { overlay.remove(); onConfirm(); } };
   }
 
+  /**
+   * Nuke all caches and unregister every service worker, then wait for the controller to truly release
+   */
+  async function nukeServiceWorkerAndCaches() {
+    try {
+      const names = await caches.keys();
+      await Promise.all(names.map(n => caches.delete(n)));
+    } catch { /* cache API may not be available */ }
+
+    if (!navigator.serviceWorker) return;
+
+    // Unregister every registration
+    try {
+      const regs = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(regs.map(r => r.unregister()));
+    } catch { /* SW API may not be available */ }
+
+    // Wait for the controller to actually release
+    if (navigator.serviceWorker.controller) {
+      await Promise.race([
+        new Promise(resolve => {
+          navigator.serviceWorker.addEventListener('controllerchange', resolve, { once: true });
+        }),
+        new Promise(resolve => setTimeout(resolve, 2000)),
+      ]);
+    }
+  }
+
   // UPDATE TIME
   function showUpdatePopup(localVer, remoteVer) {
     const overlay = document.createElement('div');
@@ -1193,14 +1221,7 @@ const App = (() => {
 
     overlay.querySelector('.update-now').onclick = async () => {
       overlay.remove();
-      try {
-        const names = await caches.keys();
-        await Promise.all(names.map(n => caches.delete(n)));
-        const regs = await navigator.serviceWorker.getRegistrations();
-        await Promise.all(regs.map(r => r.unregister()));
-      } catch {
-        // cache / service worker API may not be available
-      }
+      await nukeServiceWorkerAndCaches();
       location.reload();
     };
 
@@ -2116,14 +2137,7 @@ const App = (() => {
         'This will delete all cached assets and reload the page to fetch fresh files, thus performing an update. Your launcher data (tiles, settings) will be preserved',
         'Purge & Reload',
         async () => {
-          try {
-            const names = await caches.keys();
-            await Promise.all(names.map(n => caches.delete(n)));
-            const regs = await navigator.serviceWorker.getRegistrations();
-            await Promise.all(regs.map(r => r.unregister()));
-          } catch {
-            // cache API may not be available
-          }
+          await nukeServiceWorkerAndCaches();
           location.reload();
         },
         '#ff9800'
@@ -2212,14 +2226,7 @@ const App = (() => {
         'This will wipe all cached assets, service worker registration, and locally-saved launcher data (tiles, settings), then close the page. After this is done, you can uninstall the app from your home screen. This is the most destructive action in the app and cannot be undone...',
         'Uninstall',
         async () => {
-          try {
-            const names = await caches.keys();
-            await Promise.all(names.map(n => caches.delete(n)));
-            const regs = await navigator.serviceWorker.getRegistrations();
-            await Promise.all(regs.map(r => r.unregister()));
-          } catch {
-            // cache / service worker API may not be available
-          }
+          await nukeServiceWorkerAndCaches();
           try { localStorage.clear(); } catch { }
           try { sessionStorage.clear(); } catch { }
           window.close();
