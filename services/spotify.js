@@ -22,6 +22,7 @@
     let parsed = artist.replace(/P!NK/gi, 'PINK');
     parsed = parsed.replace(/(^|\W)\$(?=\w)/g, '$1S');
     parsed = parsed.replace(/\$/g, 's');
+    parsed = parsed.replace(/'/g, '');
     parsed = parsed.replace(/[!.]+$/g, '').replace(/!/g, '');
     return parsed;
   }
