@@ -20,13 +20,28 @@
   function cleanArtistName(artist) {
     if (!artist) return '';
     let parsed = artist.replace(/P!NK/gi, 'PINK');
+    parsed = parsed.replace(/(^|\W)\$(?=\w)/g, '$1S');
+    parsed = parsed.replace(/\$/g, 's');
     parsed = parsed.replace(/[!.]+$/g, '').replace(/!/g, '');
     return parsed;
   }
 
   function cleanTrackName(track) {
     if (!track) return '';
-    let parsed = track.replace(/[',.;:+!?]/g, '');
+    let parsed = track.replace(/(^|\W)\$(?=\w)/g, '$1S');
+    parsed = parsed.replace(/\$/g, 's');
+    
+    parsed = parsed.replace(/[',.;:+!?]/g, (match, offset, string) => {
+      if (match === '.') {
+        const prev = string[offset - 1];
+        const next = string[offset + 1];
+        if (prev >= '0' && prev <= '9' && next >= '0' && next <= '9') {
+          return '.'; // Keep period if between numbers
+        }
+      }
+      return '';
+    });
+    
     parsed = parsed.replace(/\//g, ' ');
     parsed = parsed.replace(/\bfeat\b/gi, 'Featuring');
     parsed = parsed.replace(/\bwith\b/gi, 'With');
