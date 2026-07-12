@@ -1693,7 +1693,8 @@ const App = (() => {
         <label>Username (On Leopard Server)</label>
         <div class="input-btn-row" style="display:flex;gap:8px;align-items:stretch;width:100%;">
           <input type="text" id="spotify-username" value="${escHtml(tile.spotifyUsername || settings.spotifyUsername || '')}" placeholder="Your registered username" autocomplete="off" autocapitalize="none" style="flex:1 1 auto;min-width:0;width:auto;">
-          <button type="button" class="inline-btn" id="spotify-test" style="-webkit-appearance:none;appearance:none;padding:10px 14px;border:1px solid rgba(255,255,255,0.85);border-radius:0;background:transparent;color:#fff;font-size:13px;font-family:'Segoe UI Supro';cursor:pointer;white-space:nowrap;flex-shrink:0;box-shadow:none;line-height:1;">Test</button>
+          <!-- we use inline styles to make sure browser does not show stock button styles -->
+          <button type="button" class="inline-btn" id="spotify-test" style="-webkit-appearance:none;appearance:none;padding:10px 14px;border:1px solid rgba(255,255,255,0.85);border-radius:0;background:transparent;color:#fff;font-size:13px;font-family:'Segoe UI Supro';cursor:pointer;white-space:nowrap;flex-shrink:0;box-shadow:none;line-height:1;">TEST</button>
         </div>
       </div>
       <div class="form-group">
@@ -1733,7 +1734,7 @@ const App = (() => {
     testBtn.onclick = async () => {
       const originalLabel = testBtn.textContent;
       testBtn.disabled = true;
-      testBtn.textContent = 'Testing...';
+      testBtn.textContent = 'Working...';
       const { ok } = await SpotifyService.testConnection();
       showToast(ok ? 'Leopard server appears to be online' : 'Leopard server appears to be offline');
       testBtn.disabled = false;
