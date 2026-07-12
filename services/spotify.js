@@ -31,7 +31,7 @@
     let parsed = track.replace(/(^|\W)\$(?=\w)/g, '$1S');
     parsed = parsed.replace(/\$/g, 's');
     
-    parsed = parsed.replace(/['’,.;:+!?]/g, (match, offset, string) => {
+    parsed = parsed.replace(/['’“”,.;:+!?]/g, (match, offset, string) => {
       if (match === '.') {
         const prev = string[offset - 1];
         const next = string[offset + 1];
