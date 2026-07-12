@@ -26,7 +26,7 @@
 
   function cleanTrackName(track) {
     if (!track) return '';
-    let parsed = track.replace(/[',.;:+!?]/g, '');
+    let parsed = track.replace(/[',.;:/+!?]/g, '');
     parsed = parsed.replace(/\bfeat\b/gi, 'Featuring');
     parsed = parsed.replace(/\bwith\b/gi, 'With');
     parsed = parsed.replace(/\bpt\b/gi, 'PT');
