@@ -43,7 +43,7 @@ Please fully read the readme before installing and using the launcher...
 
 ## Spotify tile integration
 
-- You need a Mac running Python 3 for this server part.
+- You need a Windows or Mac running Python 3 with the spotify app OPEN for this server part.
 - Spotify is currently being a douche after a certain shadow library dumped all of their content and has halted new app creation. I am looking for a better way around this but don't hold your breath.
 
 **Setting up Spotify 'now playing' tile**
@@ -60,7 +60,7 @@ The code of this server is in the backends directory. You can set this up yourse
 - I am not a big company, and I cannot afford abuse of bandwidth. This is a very low bandwidth implementation, but I will ask people not to 'test the limits' of my poor server
 - Would be much appreicated, thanks :3
 
-I am working on making a Windows and Linux server version...
+I am (probably) working on making a Linux server version...
 
 ## Using the launcher
 
