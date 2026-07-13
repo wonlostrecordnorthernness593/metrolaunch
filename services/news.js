@@ -59,11 +59,11 @@
       return Promise.resolve();
     }
 
-    return fetch(TOP_URL)
+    return fetch(TOP_URL, { cache: 'no-store' })
       .then(r => r.json())
       .then(ids => {
         const top = ids.slice(0, HEADLINE_COUNT);
-        return Promise.all(top.map(id => fetch(ITEM_URL(id)).then(r => r.json())));
+        return Promise.all(top.map(id => fetch(ITEM_URL(id), { cache: 'no-store' }).then(r => r.json())));
       })
       .then(stories => {
         data = stories

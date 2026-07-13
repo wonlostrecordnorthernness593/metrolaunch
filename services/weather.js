@@ -73,7 +73,7 @@
     const units = settings.weatherUseCelsius ? 'metric' : 'imperial';
     const url = `https://api.openweathermap.org/data/2.5/weather?zip=${encodeURIComponent(zip)},${settings.weatherCountry}&appid=${settings.weatherApiKey}&units=${units}`;
 
-    return fetch(url)
+    return fetch(url, { cache: 'no-store' })
       .then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
       .then(d => {
         if (!d.main) return;

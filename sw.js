@@ -59,6 +59,9 @@ self.addEventListener('fetch', event => {
     // skip non-http/https requests
     if (!event.request.url.startsWith('http')) return;
 
+    const url = new URL(event.request.url);
+    if (url.origin !== location.origin) return;
+
     event.respondWith(
         (async () => {
             // ignore query strings on navigation requests to match cached index
